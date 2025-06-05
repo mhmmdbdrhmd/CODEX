@@ -91,13 +91,30 @@ def align_by_extrema(y, t):
         if len(yv) > 0:
             shifts.append(yv[np.argmin(np.abs(yv - idx))] - idx)
     lag = int(np.median(shifts)) if shifts else 0
-    return np.roll(y, -lag), tp, tv, lag
+
+    # Shift by lag without wrap-around, padding with edge values
+    def shift_with_pad(arr, shift):
+        if shift > 0:
+            shifted = np.empty_like(arr)
+            shifted[:-shift] = arr[shift:]
+            shifted[-shift:] = arr[-1]
+        elif shift < 0:
+            shift = -shift
+            shifted = np.empty_like(arr)
+            shifted[shift:] = arr[:-shift]
+            shifted[:shift] = arr[0]
+        else:
+            shifted = arr.copy()
+        return shifted
+
+    y_shifted = shift_with_pad(y, lag)
+    return y_shifted, tp, tv, lag
 
 # ------------------------------------------------------------------------------
 # Helper: Grid Search Scaling to Minimize Extrema MAE
 # ------------------------------------------------------------------------------
 def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
-    """Two-step optimization of reference angle and scale factor.
+    """Grid search to optimize reference angle and scale factor using MAE only.
 
     Parameters
     ----------
@@ -115,13 +132,13 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
     Returns
     -------
     best_scaled : ndarray
-        Scaled version of ``y_al`` giving the lowest extrema MAE.
+        Scaled version of ``y_al`` giving the lowest MAE.
     best_ref : float
         Reference angle used for the best scaling.
     best_k : float
         Scale factor used for the best scaling.
     best_mae : float
-        The resulting extrema MAE.
+        The resulting MAE.
     """
     if ref_range is None:
         # Determine range of aligned signal and focus search around its mean
@@ -135,35 +152,24 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
 
     mask = ~np.isnan(t) & ~np.isnan(y_al)
 
-    # Step 1: choose reference angle that minimizes overall MAE
+    best_mae = np.inf
+    best_scaled = y_al.copy()
     best_ref = 90.0
-    best_mae_full = np.inf
+    best_k = 1.0
+
     lo, hi = np.nanmin(y_al), np.nanmax(y_al)
     for ref in ref_range:
         ref_c = np.clip(ref, lo, hi)
         for k in k_range:
             scaled = k * (y_al - ref_c) + ref_c
-            mae_full = mean_absolute_error(t[mask], scaled[mask])
-            if mae_full < best_mae_full:
-                best_mae_full = mae_full
+            mae = mean_absolute_error(t[mask], scaled[mask])
+            if mae < best_mae:
+                best_mae = mae
+                best_scaled = scaled
                 best_ref = ref_c
+                best_k = k
 
-    # Step 2: choose scale factor that minimizes extrema MAE with ref fixed
-    best_k = 1.0
-    best_ext_mae = np.inf
-    best_scaled = y_al.copy()
-    for k in k_range:
-        scaled = k * (y_al - best_ref) + best_ref
-        if len(ext_idx) > 0:
-            mae_ext = np.mean(np.abs(scaled[ext_idx] - t[ext_idx]))
-        else:
-            mae_ext = np.nan
-        if mae_ext < best_ext_mae:
-            best_ext_mae = mae_ext
-            best_k = k
-            best_scaled = scaled
-
-    return best_scaled, best_ref, best_k, best_ext_mae
+    return best_scaled, best_ref, best_k, best_mae
 
 # -----------------------------------------------------------------------------------
 # 3. KF_inv (Speed‐Aware Kalman Filter)
@@ -193,8 +199,14 @@ if __name__ == "__main__":
     # Directory containing all CSV recordings
     recordings_dir = "recordings"
 
-    # Optional: Exclude first N seconds based on timestamp (ms); set None to disable
-    exclude_first_seconds = 20.0  # in seconds
+    # Optional: Exclude first N seconds globally; set None to disable
+    exclude_first_seconds = None  # in seconds
+
+    # Per-file trimming in seconds [start_trim, end_trim]
+    trim_seconds = {
+        "log_1622_64296": [0, 500],
+        "log_1618_76251": [0, 100],
+    }
 
     # Initialize a list to collect metrics for all files
     all_metrics = []
@@ -209,6 +221,16 @@ if __name__ == "__main__":
 
         # 4.1 Load and preprocess
         df = load_and_preprocess(file_path)
+
+        # Trim beginning/end based on per-file settings
+        base = fname[:-4]
+        if base in trim_seconds:
+            start_trim, end_trim = trim_seconds[base]
+            if start_trim > 0:
+                df = df.iloc[start_trim:].reset_index(drop=True)
+            if end_trim > 0:
+                df = df.iloc[:-end_trim] if end_trim < len(df) else df.iloc[0:0]
+                df = df.reset_index(drop=True)
 
         # 4.2 Optionally exclude initial period based on timestamp column (ms)
         if exclude_first_seconds is not None:
@@ -247,18 +269,18 @@ if __name__ == "__main__":
             ext_idx = np.concatenate([tp, tv])
             ext_mae = np.mean(np.abs(y_al[ext_idx] - t_clean[ext_idx])) if len(ext_idx) > 0 else np.nan
 
-            y_al_scaled, ref_opt, k_opt, ext_mae_scaled = optimize_scaling(t_clean, y_al, ext_idx)
+            y_al_scaled, ref_opt, k_opt, mae_scaled_val = optimize_scaling(t_clean, y_al, ext_idx)
             y_scaled = k_opt * (y - ref_opt) + ref_opt
 
             rmse_scaled = np.sqrt(mean_squared_error(t_clean[mask], y_al_scaled[mask]))
             mae_scaled = mean_absolute_error(t_clean[mask], y_al_scaled[mask])
 
             all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, mape_pk,
-                                mave_vl, lag, ref_opt, k_opt, ext_mae_scaled,
+                                mave_vl, lag, ref_opt, k_opt, mae_scaled_val,
                                 rmse_scaled, mae_scaled))
 
             print(f"  {name}: MAE={mae:.3f}, ExtMAE={ext_mae:.3f}, "
-                  f"MAE_scaled={mae_scaled:.3f}, ExtMAE_scaled={ext_mae_scaled:.3f}")
+                  f"MAE_scaled={mae_scaled:.3f}, MAE_opt={mae_scaled_val:.3f}")
 
             params[name] = (ref_opt, k_opt)
             aligned[name] = (y_al, lag, y_al_scaled)
@@ -352,7 +374,7 @@ if __name__ == "__main__":
     # 4.8 After processing all files, display combined metrics
     df_all_metrics = pd.DataFrame(all_metrics, columns=[
         "Filename", "Method", "RMSE", "MAE", "Extrema_MAE", "MAPE_pk",
-        "MAVE_vl", "Lag", "Ref_Angle", "Scale_k", "Extrema_MAE_scaled",
+        "MAVE_vl", "Lag", "Ref_Angle", "Scale_k", "MAE_opt",
         "RMSE_scaled", "MAE_scaled"
     ])
     print("\n=== Combined Performance Metrics for All Recordings ===")

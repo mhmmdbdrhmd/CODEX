@@ -21,7 +21,7 @@ Rather than hard‐coding specific filenames, this workflow is designed to opera
     └── …
 ```
 
-- **filter_analysis.py**: Contains all code for loading, preprocessing, filtering, alignment, and performance evaluation. It processes **one recording file at a time**, or can be adapted to loop over multiple files in the `recordings/` folder.
+- **filter_analysis.py**: Contains all code for loading, preprocessing, filtering, alignment, and performance evaluation. It automatically processes **every CSV recording** in the `recordings/` folder.
 - **recordings/**: Directory where you place each new CSV log. Each file should include:
   - Two sets of light‐sensor sums (left vs. right),
   - A “hitch‐angle reference” column (the clean target),
@@ -42,7 +42,7 @@ Rather than hard‐coding specific filenames, this workflow is designed to opera
 8. **Compute metrics** (RMSE, MAE, plus specialized extrema‐MAE) to evaluate performance.
 9. **Optionally test alternative filters** (e.g. Savitzky–Golay and hybrid KF_on_SG) on the same recording and compare results.
 
-Because each recording file uses identical column names/patterns, you can simply update the path to the new CSV and re‐run the same script. No rewriting of “File1/File2/File3” is necessary.
+Because each recording file uses identical column names/patterns, you can simply drop new CSVs into the `recordings/` directory and re-run the script.
 
 ---
 
@@ -95,7 +95,7 @@ Customize by commenting/uncommenting the desired method calls in `filter_analysi
 2. **Detect Filtered Extrema**: local maxima/minima of each filtered output with 10% of that series’ range.
 3. **Align by Extrema**:
    - For each true extremum index, find nearest filtered extremum index, compute shift = (filtered_idx - true_idx).
-   - Take median(shift) = `lag`. Circularly shift filtered output by `-lag`.
+   - Take median(shift) = `lag`. Shift the filtered output by `-lag` without wrap-around, repeating the edge values.
    - Now filtered peaks/valleys coincide with true peaks/valleys.
 
 ---
@@ -106,10 +106,7 @@ After alignment, each filtered output is rescaled by searching a dense grid of
 reference angles and scale factors. Reference candidates are drawn from the
 range of the aligned signal itself, with 200 points concentrated around the
 signal mean and clamped to its min/max. For every reference, scale factors from
-0.8 to 1.2 (100 steps) are tested. The pair that minimizes overall MAE selects
-the reference; then, with that reference fixed, the scale factor giving the
-lowest **Extrema_MAE** is chosen. The resulting `ref_angle`, `scale_k`, and
-`Extrema_MAE_scaled` are logged for each filter.
+0.8 to 1.2 (100 steps) are tested. The pair that yields the lowest MAE is selected. The resulting `ref_angle`, `scale_k`, and optimized MAE (`MAE_opt`) are logged for each filter.
 
 ---
 
@@ -121,7 +118,7 @@ After alignment:
 - **MAPE_pk**: mean absolute error at true-peak indices.
 - **MAVE_vl**: mean absolute error at true-valley indices.
 - **Extrema_MAE**: mean absolute error over all true-peak+valley indices.
-- **Extrema_MAE_scaled**: extrema MAE after the scaling optimization.
+- **MAE_opt**: lowest MAE found by the scaling optimization.
 - **RMSE_scaled**: RMSE after scaling optimization.
 - **MAE_scaled**: MAE after scaling optimization.
 
@@ -130,9 +127,9 @@ After alignment:
 ## 7. How to Use
 
 1. **Place recording(s)** (CSV files) in `recordings/`.
-2. **Edit `filter_analysis.py`**:
-   - Set `file_path = "recordings/your_recording.csv"`.
-   - Adjust `exclude_first_seconds` if needed (default = 20.0).
+2. **Edit `filter_analysis.py`** if needed:
+   - Adjust `exclude_first_seconds` (default = `None`).
+   - Update the `trim_seconds` dictionary for per-file start/end trimming.
 3. **Run**:
    ```
    python filter_analysis.py
@@ -143,8 +140,7 @@ After alignment:
      2. **Detail View** (2×3).
 
 4. **Add new recordings**:
-   - Add more CSVs to `recordings/`.
-   - Optionally loop over all files by modifying `filter_analysis.py`.
+   - Just drop additional CSVs into `recordings/` and run the script again.
 5. **Generated figures** are saved in `results/` as PNG files when you run the
    script. These images are reproducible and don't need to be committed to
    version control.
