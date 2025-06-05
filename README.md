@@ -102,13 +102,14 @@ Customize by commenting/uncommenting the desired method calls in `filter_analysi
 
 ## 5. Scaling Optimization
 
-After alignment, each filtered output can be scaled around a reference angle
-close to 90°. Scaling is determined in two steps: first the reference angle is
-selected by minimizing overall MAE (searching 80–100° in 1° steps with a range
-of scale factors), then the scale factor is chosen to minimize
-**Extrema_MAE** at the fixed reference. The chosen `ref_angle` and
-`scale_k` values, along with the resulting `Extrema_MAE_scaled`, are recorded
-for each filter.
+After alignment, each filtered output is rescaled by searching a dense grid of
+reference angles and scale factors. Reference candidates are drawn from the
+range of the aligned signal itself, with 200 points concentrated around the
+signal mean and clamped to its min/max. For every reference, scale factors from
+0.8 to 1.2 (100 steps) are tested. The pair that minimizes overall MAE selects
+the reference; then, with that reference fixed, the scale factor giving the
+lowest **Extrema_MAE** is chosen. The resulting `ref_angle`, `scale_k`, and
+`Extrema_MAE_scaled` are logged for each filter.
 
 ---
 
