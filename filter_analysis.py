@@ -206,6 +206,7 @@ if __name__ == "__main__":
     trim_seconds = {
         "log_1622_64296": [0, 500],
         "log_1618_76251": [0, 100],
+        "log_1626_93118": [100, 0],
     }
 
     # Initialize a list to collect metrics for all files
