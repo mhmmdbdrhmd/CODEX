@@ -124,22 +124,29 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
         The resulting extrema MAE.
     """
     if ref_range is None:
-        ref_range = np.arange(80, 101)
+        # Determine range of aligned signal and focus search around its mean
+        lo, hi = np.nanmin(y_al), np.nanmax(y_al)
+        mid = (lo + hi) / 2.0
+        width = (hi - lo) / 2.0
+        r = np.linspace(-1.0, 1.0, 200)
+        ref_range = mid + width * np.sign(r) * np.abs(r) ** 1.5
     if k_range is None:
-        k_range = np.linspace(0.9, 1.1, 21)
+        k_range = np.linspace(0.8, 1.2, 100)
 
     mask = ~np.isnan(t) & ~np.isnan(y_al)
 
     # Step 1: choose reference angle that minimizes overall MAE
     best_ref = 90.0
     best_mae_full = np.inf
+    lo, hi = np.nanmin(y_al), np.nanmax(y_al)
     for ref in ref_range:
+        ref_c = np.clip(ref, lo, hi)
         for k in k_range:
-            scaled = k * (y_al - ref) + ref
+            scaled = k * (y_al - ref_c) + ref_c
             mae_full = mean_absolute_error(t[mask], scaled[mask])
             if mae_full < best_mae_full:
                 best_mae_full = mae_full
-                best_ref = ref
+                best_ref = ref_c
 
     # Step 2: choose scale factor that minimizes extrema MAE with ref fixed
     best_k = 1.0
@@ -249,6 +256,9 @@ if __name__ == "__main__":
             all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, mape_pk,
                                 mave_vl, lag, ref_opt, k_opt, ext_mae_scaled,
                                 rmse_scaled, mae_scaled))
+
+            print(f"  {name}: MAE={mae:.3f}, ExtMAE={ext_mae:.3f}, "
+                  f"MAE_scaled={mae_scaled:.3f}, ExtMAE_scaled={ext_mae_scaled:.3f}")
 
             params[name] = (ref_opt, k_opt)
             aligned[name] = (y_al, lag, y_al_scaled)
