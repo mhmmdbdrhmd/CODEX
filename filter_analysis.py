@@ -165,7 +165,7 @@ if __name__ == "__main__":
             mave_vl = np.mean(np.abs(y_al[tv] - t_clean[tv])) if len(tv) > 0 else np.nan
             ext_idx = np.concatenate([tp, tv])
             ext_mae = np.mean(np.abs(y_al[ext_idx] - t_clean[ext_idx])) if len(ext_idx) > 0 else np.nan
-            all_metrics.append((fname, name, rmse, mae, ext_mae, mape_pk, mave_vl, lag))
+            all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, mape_pk, mave_vl, lag))
 
         # 4.6 Plot General + Alignment for this file
         kf_al, tp, tv, lag_kf = align_by_extrema(kf_out, t_clean)
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         ax1.plot(idx, sg_out,     'r-', lw=1,   label='SG Filter')
         ax1.plot(idx, kf_on_sg_out,'m-', lw=1,  label='KF_on_SG')
         ax1.set_ylabel('Angle')
-        ax1.set_title(f"General + Alignment: {fname}")
+        ax1.set_title(f"General + Alignment: {fname[:-4]}")
         ax1.legend(loc='upper left')
         ax1_r = ax1.twinx()
         ax1_r.plot(idx, speed, 'g-', lw=1, label='Speed')
@@ -202,7 +202,8 @@ if __name__ == "__main__":
         ax2_r.set_ylabel('Speed')
 
         plt.tight_layout()
-        plt.show()
+        fig.savefig("results/General_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
 
         # 4.7 Plot Detail View (2×3) using same y-limits
         left_ylim = ax1.get_ylim()
@@ -223,10 +224,12 @@ if __name__ == "__main__":
             axd_r.plot(idx[s:e], speed[s:e], 'g-', lw=1)
             axd_r.set_ylim(right_ylim)
 
-        fig.suptitle(f"Detail View (2×3): {fname}", y=1.02)
+        fig.suptitle(f"Detail View (2×3): {fname[:-4]}", y=1.02)
         fig.legend(['True','KF_inv','SG Filter','KF_on_SG','Speed'], loc='upper right')
         plt.tight_layout()
-        plt.show()
+        fig.savefig("results/Detail_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
 
     # 4.8 After processing all files, display combined metrics
     df_all_metrics = pd.DataFrame(all_metrics, columns=[
