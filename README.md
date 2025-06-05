@@ -140,6 +140,9 @@ After alignment:
 4. **Add new recordings**:
    - Add more CSVs to `recordings/`.
    - Optionally loop over all files by modifying `filter_analysis.py`.
+5. **Generated figures** are saved in `results/` as PNG files when you run the
+   script. These images are reproducible and don't need to be committed to
+   version control.
 
 ---
 
