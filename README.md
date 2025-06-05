@@ -100,7 +100,17 @@ Customize by commenting/uncommenting the desired method calls in `filter_analysi
 
 ---
 
-## 5. Performance Metrics (Single Recording)
+## 5. Scaling Optimization
+
+After alignment, each filtered output can be scaled around a reference angle
+close to 90°. The script performs a grid search over reference angles (85–95°)
+and scale factors (0.9–1.1) to minimize **Extrema_MAE** on the aligned signal.
+The chosen `ref_angle` and `scale_k` values, along with the resulting
+`Extrema_MAE_scaled`, are recorded for each filter.
+
+---
+
+## 6. Performance Metrics (Single Recording)
 
 After alignment:
 - **RMSE**: sqrt(mean squared error over all valid samples).
@@ -108,10 +118,11 @@ After alignment:
 - **MAPE_pk**: mean absolute error at true-peak indices.
 - **MAVE_vl**: mean absolute error at true-valley indices.
 - **Extrema_MAE**: mean absolute error over all true-peak+valley indices.
+- **Extrema_MAE_scaled**: extrema MAE after the scaling optimization.
 
 ---
 
-## 6. How to Use
+## 7. How to Use
 
 1. **Place recording(s)** (CSV files) in `recordings/`.
 2. **Edit `filter_analysis.py`**:
@@ -132,7 +143,7 @@ After alignment:
 
 ---
 
-## 7. Next Steps & Customization
+## 8. Next Steps & Customization
 
 - Adjust prominence thresholds or filter parameters as needed.
 - Explore additional causal smoothing methods.
