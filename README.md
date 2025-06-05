@@ -103,9 +103,12 @@ Customize by commenting/uncommenting the desired method calls in `filter_analysi
 ## 5. Scaling Optimization
 
 After alignment, each filtered output can be scaled around a reference angle
-close to 90°. The script performs a grid search over reference angles (85–95°)
-and scale factors (0.9–1.1) to minimize **Extrema_MAE** on the aligned signal.
-The chosen `ref_angle` and `scale_k` values, along with the resulting
+near the signal's 90° baseline. Scaling is determined in two steps: first the reference angle is
+selected by minimizing overall MAE. The search tries 200 reference angles
+between the minimum and maximum of the true signal with additional sampling
+near its mean. With that reference fixed, the scale factor is chosen from 100
+values between 0.5 and 1.5 to minimize **Extrema_MAE**. The chosen
+`ref_angle` and `scale_k` values, along with the resulting
 `Extrema_MAE_scaled`, are recorded for each filter.
 
 ---
@@ -119,6 +122,8 @@ After alignment:
 - **MAVE_vl**: mean absolute error at true-valley indices.
 - **Extrema_MAE**: mean absolute error over all true-peak+valley indices.
 - **Extrema_MAE_scaled**: extrema MAE after the scaling optimization.
+- **RMSE_scaled**: RMSE after scaling optimization.
+- **MAE_scaled**: MAE after scaling optimization.
 
 ---
 
