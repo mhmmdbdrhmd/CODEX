@@ -97,7 +97,7 @@ def align_by_extrema(y, t):
 # Helper: Grid Search Scaling to Minimize Extrema MAE
 # ------------------------------------------------------------------------------
 def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
-    """Grid search over reference angles and scale factors.
+    """Two-step optimization of reference angle and scale factor.
 
     Parameters
     ----------
@@ -108,7 +108,7 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
     ext_idx : array-like
         Indices of extrema in the true signal.
     ref_range : iterable, optional
-        Reference angles to test (default 85..95).
+        Reference angles to test (default 80..100).
     k_range : iterable, optional
         Scale factors to test (default 0.9..1.1).
 
@@ -124,29 +124,39 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
         The resulting extrema MAE.
     """
     if ref_range is None:
-        ref_range = np.arange(85, 96)
+        ref_range = np.arange(80, 101)
     if k_range is None:
         k_range = np.linspace(0.9, 1.1, 21)
 
-    best_mae = np.inf
-    best_ref = 90.0
-    best_k = 1.0
-    best_scaled = y_al.copy()
+    mask = ~np.isnan(t) & ~np.isnan(y_al)
 
+    # Step 1: choose reference angle that minimizes overall MAE
+    best_ref = 90.0
+    best_mae_full = np.inf
     for ref in ref_range:
         for k in k_range:
             scaled = k * (y_al - ref) + ref
-            if len(ext_idx) > 0:
-                mae = np.mean(np.abs(scaled[ext_idx] - t[ext_idx]))
-            else:
-                mae = np.nan
-            if mae < best_mae:
-                best_mae = mae
+            mae_full = mean_absolute_error(t[mask], scaled[mask])
+            if mae_full < best_mae_full:
+                best_mae_full = mae_full
                 best_ref = ref
-                best_k = k
-                best_scaled = scaled
 
-    return best_scaled, best_ref, best_k, best_mae
+    # Step 2: choose scale factor that minimizes extrema MAE with ref fixed
+    best_k = 1.0
+    best_ext_mae = np.inf
+    best_scaled = y_al.copy()
+    for k in k_range:
+        scaled = k * (y_al - best_ref) + best_ref
+        if len(ext_idx) > 0:
+            mae_ext = np.mean(np.abs(scaled[ext_idx] - t[ext_idx]))
+        else:
+            mae_ext = np.nan
+        if mae_ext < best_ext_mae:
+            best_ext_mae = mae_ext
+            best_k = k
+            best_scaled = scaled
+
+    return best_scaled, best_ref, best_k, best_ext_mae
 
 # -----------------------------------------------------------------------------------
 # 3. KF_inv (Speed‐Aware Kalman Filter)
@@ -233,8 +243,12 @@ if __name__ == "__main__":
             y_al_scaled, ref_opt, k_opt, ext_mae_scaled = optimize_scaling(t_clean, y_al, ext_idx)
             y_scaled = k_opt * (y - ref_opt) + ref_opt
 
+            rmse_scaled = np.sqrt(mean_squared_error(t_clean[mask], y_al_scaled[mask]))
+            mae_scaled = mean_absolute_error(t_clean[mask], y_al_scaled[mask])
+
             all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, mape_pk,
-                                mave_vl, lag, ref_opt, k_opt, ext_mae_scaled))
+                                mave_vl, lag, ref_opt, k_opt, ext_mae_scaled,
+                                rmse_scaled, mae_scaled))
 
             params[name] = (ref_opt, k_opt)
             aligned[name] = (y_al, lag, y_al_scaled)
@@ -253,12 +267,12 @@ if __name__ == "__main__":
         ax1.plot(idx, kf_out,     'k-', lw=1.2, label='KF_inv')
         ax1.plot(idx, sg_out,     'r-', lw=1,   label='SG Filter')
         ax1.plot(idx, kf_on_sg_out,'m-', lw=1,  label='KF_on_SG')
+        ax1.plot(idx, scaled["KF_inv"],     'k:', lw=1, label='KF_inv_scaled')
+        ax1.plot(idx, scaled["SG"],         'r:', lw=1, label='SG_scaled')
+        ax1.plot(idx, scaled["KF_on_SG"],   'm:', lw=1, label='KF_on_SG_scaled')
         ax1.set_ylabel('Angle')
         ax1.set_title(f"General + Alignment: {fname[:-4]}")
         ax1.legend(loc='upper left')
-        ax1.plot(idx, scaled["KF_inv"],     'k:', lw=1)
-        ax1.plot(idx, scaled["SG"],         'r:', lw=1)
-        ax1.plot(idx, scaled["KF_on_SG"],   'm:', lw=1)
         ax1_r = ax1.twinx()
         ax1_r.plot(idx, speed, 'g-', lw=1, label='Speed')
         ax1_r.set_ylabel('Speed')
@@ -269,14 +283,14 @@ if __name__ == "__main__":
         ax2.plot(idx, kf_al,       'k--', lw=1.2, label=f'KF_aligned (lag={lag_kf})')
         ax2.plot(idx, sg_al,       'r--', lw=1,   label=f'SG_aligned (lag={lag_sg})')
         ax2.plot(idx, kf_on_sg_al, 'm--', lw=1,   label=f'KF_on_SG_aligned (lag={lag_kf_sg})')
+        ax2.plot(idx, kf_al_scaled,       'k:', lw=1, label='KF_inv_scaled')
+        ax2.plot(idx, sg_al_scaled,       'r:', lw=1, label='SG_scaled')
+        ax2.plot(idx, kf_on_sg_al_scaled, 'm:', lw=1, label='KF_on_SG_scaled')
         ax2.scatter(idx[tp], t_clean[tp],   c='cyan',   marker='o', label='True Peaks')
         ax2.scatter(idx[tv], t_clean[tv],   c='magenta', marker='x', label='True Valleys')
         ax2.set_xlabel('Index')
         ax2.set_ylabel('Angle')
         ax2.legend(loc='upper left')
-        ax2.plot(idx, kf_al_scaled,       'k:', lw=1)
-        ax2.plot(idx, sg_al_scaled,       'r:', lw=1)
-        ax2.plot(idx, kf_on_sg_al_scaled, 'm:', lw=1)
         ax2_r = ax2.twinx()
         ax2_r.plot(idx, speed, 'g-', lw=1)
         ax2_r.set_ylabel('Speed')
@@ -310,10 +324,16 @@ if __name__ == "__main__":
         fig.suptitle(f"Detail View (2×3): {fname[:-4]}", y=1.02)
         legend_lines = [Line2D([0],[0],color='b'),
                         Line2D([0],[0],color='k'),
+                        Line2D([0],[0],color='k', linestyle=':'),
                         Line2D([0],[0],color='r'),
+                        Line2D([0],[0],color='r', linestyle=':'),
                         Line2D([0],[0],color='m'),
+                        Line2D([0],[0],color='m', linestyle=':'),
                         Line2D([0],[0],color='g')]
-        fig.legend(legend_lines, ['True','KF_inv','SG Filter','KF_on_SG','Speed'], loc='upper right')
+        fig.legend(legend_lines,
+                   ['True','KF_inv','KF_inv_scaled','SG Filter','SG_scaled',
+                    'KF_on_SG','KF_on_SG_scaled','Speed'],
+                   loc='upper right')
         plt.tight_layout()
         fig.savefig("results/Detail_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
         plt.close(fig)
@@ -322,7 +342,8 @@ if __name__ == "__main__":
     # 4.8 After processing all files, display combined metrics
     df_all_metrics = pd.DataFrame(all_metrics, columns=[
         "Filename", "Method", "RMSE", "MAE", "Extrema_MAE", "MAPE_pk",
-        "MAVE_vl", "Lag", "Ref_Angle", "Scale_k", "Extrema_MAE_scaled"
+        "MAVE_vl", "Lag", "Ref_Angle", "Scale_k", "Extrema_MAE_scaled",
+        "RMSE_scaled", "MAE_scaled"
     ])
     print("\n=== Combined Performance Metrics for All Recordings ===")
     print(df_all_metrics.to_string(index=False))
