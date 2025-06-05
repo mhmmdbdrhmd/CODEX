@@ -269,18 +269,20 @@ if __name__ == "__main__":
             ext_idx = np.concatenate([tp, tv])
             ext_mae = np.mean(np.abs(y_al[ext_idx] - t_clean[ext_idx])) if len(ext_idx) > 0 else np.nan
 
-            y_al_scaled, ref_opt, k_opt, mae_scaled_val = optimize_scaling(t_clean, y_al, ext_idx)
+            y_al_scaled, ref_opt, k_opt, _ = optimize_scaling(t_clean, y_al, ext_idx)
             y_scaled = k_opt * (y - ref_opt) + ref_opt
 
             rmse_scaled = np.sqrt(mean_squared_error(t_clean[mask], y_al_scaled[mask]))
             mae_scaled = mean_absolute_error(t_clean[mask], y_al_scaled[mask])
+            ext_mae_scaled = (np.mean(np.abs(y_al_scaled[ext_idx] - t_clean[ext_idx]))
+                              if len(ext_idx) > 0 else np.nan)
 
-            all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, mape_pk,
-                                mave_vl, lag, ref_opt, k_opt, mae_scaled_val,
+            all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, ext_mae_scaled,
+                                mape_pk, mave_vl, lag, ref_opt, k_opt,
                                 rmse_scaled, mae_scaled))
 
             print(f"  {name}: MAE={mae:.3f}, ExtMAE={ext_mae:.3f}, "
-                  f"MAE_scaled={mae_scaled:.3f}, MAE_opt={mae_scaled_val:.3f}")
+                  f"MAE_scaled={mae_scaled:.3f}, ExtMAE_scaled={ext_mae_scaled:.3f}")
 
             params[name] = (ref_opt, k_opt)
             aligned[name] = (y_al, lag, y_al_scaled)
@@ -373,9 +375,9 @@ if __name__ == "__main__":
 
     # 4.8 After processing all files, display combined metrics
     df_all_metrics = pd.DataFrame(all_metrics, columns=[
-        "Filename", "Method", "RMSE", "MAE", "Extrema_MAE", "MAPE_pk",
-        "MAVE_vl", "Lag", "Ref_Angle", "Scale_k", "MAE_opt",
-        "RMSE_scaled", "MAE_scaled"
+        "Filename", "Method", "RMSE", "MAE", "Extrema_MAE",
+        "Extrema_MAE_scaled", "MAPE_pk", "MAVE_vl", "Lag",
+        "Ref_Angle", "Scale_k", "RMSE_scaled", "MAE_scaled"
     ])
     print("\n=== Combined Performance Metrics for All Recordings ===")
     print(df_all_metrics.to_string(index=False))

@@ -106,7 +106,8 @@ After alignment, each filtered output is rescaled by searching a dense grid of
 reference angles and scale factors. Reference candidates are drawn from the
 range of the aligned signal itself, with 200 points concentrated around the
 signal mean and clamped to its min/max. For every reference, scale factors from
-0.8 to 1.2 (100 steps) are tested. The pair that yields the lowest MAE is selected. The resulting `ref_angle`, `scale_k`, and optimized MAE (`MAE_opt`) are logged for each filter.
+0.8 to 1.2 (100 steps) are tested. The pair that yields the lowest MAE is selected.
+The resulting `ref_angle` and `scale_k` are logged for each filter.
 
 ---
 
@@ -118,9 +119,9 @@ After alignment:
 - **MAPE_pk**: mean absolute error at true-peak indices.
 - **MAVE_vl**: mean absolute error at true-valley indices.
 - **Extrema_MAE**: mean absolute error over all true-peak+valley indices.
-- **MAE_opt**: lowest MAE found by the scaling optimization.
 - **RMSE_scaled**: RMSE after scaling optimization.
 - **MAE_scaled**: MAE after scaling optimization.
+- **Extrema_MAE_scaled**: mean absolute error at true extrema after scaling.
 
 ---
 
