@@ -142,6 +142,8 @@ After alignment:
 2. **Edit `filter_analysis.py`** if needed:
    - Adjust `exclude_first_seconds` (default = `None`).
    - Update the `trim_seconds` dictionary for per-file start/end trimming.
+   - Optionally define per-file light-sensor offsets via the `sensor_offset`
+     dictionary (default = `16`).
 3. **Run**:
    ```
    python filter_analysis.py
