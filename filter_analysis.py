@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from scipy.signal import find_peaks, savgol_filter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+from tabulate import tabulate
 
 # -----------------------------------------------------------------------------------
 # 1. Load & Preprocess Function
@@ -397,4 +398,20 @@ if __name__ == "__main__":
     print(df_all_metrics.to_string(index=False))
     os.makedirs("results", exist_ok=True)
     df_all_metrics.to_csv("results/performance.csv", index=False)
+
+    # Update README table between markers
+    try:
+        marker_start = "<!-- RESULTS_TABLE_START -->"
+        marker_end = "<!-- RESULTS_TABLE_END -->"
+        with open("README.md", "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        if marker_start in lines and marker_end in lines:
+            s = lines.index(marker_start)
+            e = lines.index(marker_end)
+            table_md = tabulate(df_all_metrics, headers="keys", tablefmt="pipe", showindex=False)
+            new_lines = lines[:s+1] + table_md.splitlines() + lines[e:]
+            with open("README.md", "w", encoding="utf-8") as f:
+                f.write("\n".join(new_lines) + "\n")
+    except Exception as exc:
+        print(f"Failed to update README table: {exc}")
 
