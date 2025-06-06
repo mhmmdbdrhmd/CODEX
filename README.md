@@ -26,18 +26,21 @@ Think of this repository as a starting point for developers to experiment with f
 .
 ├── README.md                  ← This file (generic instructions)
 ├── filter_analysis.py         ← Python script (load any CSV, process, plot, metrics)
-└── recordings/                ← Place one or more CSV recordings here
-    ├── recording_YYYYMMDD.csv ← Example recording file
-    ├── another_recording.csv
-    └── …
+├── recordings/                ← Place one or more CSV recordings here
+│   ├── log_1618_76251.csv     ← Example recording file
+│   ├── log_1622_64296.csv
+│   └── log_1626_93118.csv
+└── results/                   ← Auto-generated figures and `performance.csv`
 ```
 
 - **filter_analysis.py**: Contains all code for loading, preprocessing, filtering, alignment, and performance evaluation. It automatically processes **every CSV recording** in the `recordings/` folder.
-- **recordings/**: Directory where you place each new CSV log. Each file should include:
-  - Two sets of light‐sensor sums (left vs. right),
-  - A “hitch‐angle reference” column (the clean target),
-  - A “speed” column (vehicle speed, in the same time base),
-  - A “timestamp” column (e.g. “ESP Time” in milliseconds).
+- **recordings/**: Directory where you place each new CSV log. Each file must contain the following columns using the exact German names from the logger:
+  - `Durchschnitt_L_SE` and `Durchschnitt_L_Be_SE` – left light-sensor sums,
+  - `Durchschnitt_R_SE` and `Durchschnitt_R_Be_SE` – right light-sensor sums,
+  - `Deichsel_Angle` – drawbar (hitch) angle reference,
+  - `Geschwindigkeit` – vehicle speed,
+  - `ESP Time` – timestamp in milliseconds.
+- **results/**: Created automatically when you run the script. Holds PNG graphs and a `performance.csv` summary table.
 
 ---
 
@@ -63,10 +66,10 @@ When you run the analysis script on any new recording:
 
 1. **Load the CSV** into a DataFrame.
 2. **Identify columns** via their column‐name patterns:
-   - The “hitch‐angle reference” column matches a pattern like `Deichsel`.
-   - The “speed” column matches a pattern like `Geschwindigkeit`.
-   - Left‐sensor sums match `Durchschnitt_L_SE` and `Durchschnitt_L_Be_SE`.
-   - Right‐sensor sums match `Durchschnitt_R_SE` and `Durchschnitt_R_Be_SE`.
+   - `Deichsel_Angle` (drawbar angle reference).
+   - `Geschwindigkeit` (speed).
+   - `Durchschnitt_L_SE` and `Durchschnitt_L_Be_SE` (left light-sensor sums).
+   - `Durchschnitt_R_SE` and `Durchschnitt_R_Be_SE` (right light-sensor sums).
 3. **Compute the raw proxy**:
   - Define
     ```
@@ -172,4 +175,57 @@ After alignment:
 ## 9. Automated Runs
 
 A GitHub Actions workflow (`run-analysis.yml`) installs Python **3.12**, installs the requirements, and then runs `python filter_analysis.py` whenever you push changes. The generated plots in `results/` are uploaded as workflow artifacts so you can inspect them without committing the PNG files.
+
+---
+
+## 10. Results Directory
+
+Running the script creates a `results/` folder containing:
+
+- `performance.csv` – table of metrics for every recording and method.
+- `General_<recording>.png` – overview plot with alignment.
+- `Detail_<recording>.png` – zoomed detail view.
+
+`performance.csv` columns:
+
+| Column | Meaning |
+|-------|---------|
+| `Filename` | source CSV log |
+| `Method` | filtering method used |
+| `RMSE`, `MAE` | overall error metrics |
+| `Extrema_MAE` | error at detected peaks/valleys |
+| `Extrema_MAE_scaled` | peak/valley error after scaling |
+| `MAPE_pk` | mean absolute peak error |
+| `MAVE_vl` | mean absolute valley error |
+| `Lag` | alignment shift in samples |
+| `Ref_Angle` | optimal reference angle |
+| `Scale_k` | scale factor applied |
+| `RMSE_scaled`, `MAE_scaled` | errors after scaling |
+
+---
+
+## 11. Results
+
+The table and figures below are automatically refreshed from the `results/` folder whenever the CI workflow runs `filter_analysis.py`. They always show the most up-to-date results from the latest analysis.
+
+<!-- RESULTS_TABLE_START -->
+| Filename       | Method   |    RMSE |     MAE |   Extrema_MAE |   Extrema_MAE_scaled |   MAPE_pk |   MAVE_vl |   Lag |   Ref_Angle |   Scale_k |   RMSE_scaled |   MAE_scaled |
+|:---------------|:---------|--------:|--------:|--------------:|---------------------:|----------:|----------:|------:|------------:|----------:|--------------:|-------------:|
+| log_1626_93118 | KF_inv   | 3.50013 | 2.72786 |       3.24046 |              1.82055 |   4.81845 |   1.78385 |    14 |     86.7324 |  1.29397  |       1.63688 |      1.1243  |
+| log_1626_93118 | SG       | 3.61859 | 2.75185 |       3.43375 |              1.75933 |   5.05427 |   1.93788 |     2 |     86.8341 |  1.29397  |       1.90762 |      1.27844 |
+| log_1626_93118 | KF_on_SG | 3.6728  | 2.76034 |       3.50694 |              1.67498 |   5.22371 |   1.92222 |     6 |     86.9135 |  1.29397  |       2.00796 |      1.34863 |
+| log_1618_76251 | KF_inv   | 2.47858 | 1.73186 |       3.42423 |              1.35454 |   2.27022 |   3.71274 |    19 |     94.418  |  0.876884 |       2.16629 |      1.36809 |
+| log_1618_76251 | SG       | 2.59131 | 1.90651 |       2.00123 |              1.57672 |   2.94572 |   1.7651  |     4 |     93.3878 |  0.886935 |       2.30534 |      1.48839 |
+| log_1618_76251 | KF_on_SG | 2.40439 | 1.80014 |       1.85107 |              1.89041 |   3.20227 |   1.51327 |    11 |     93.1637 |  0.88191  |       2.15722 |      1.39526 |
+| log_1622_64296 | KF_inv   | 3.13407 | 2.51597 |       2.41009 |              1.92347 |   2.38969 |   2.43168 |    10 |    106.716  |  0.91206  |       2.81522 |      1.99782 |
+| log_1622_64296 | SG       | 3.13703 | 2.46259 |       3.91841 |              3.6739  |   4.03643 |   3.79346 |    10 |    123.011  |  0.957286 |       2.8626  |      1.98251 |
+| log_1622_64296 | KF_on_SG | 3.09645 | 2.47268 |       4.08145 |              3.99556 |   4.63121 |   3.49934 |    12 |    127.293  |  0.962312 |       2.86606 |      2.00294 |
+<!-- RESULTS_TABLE_END -->
+
+![General 1618](results/General_log_1618_76251.png)
+![Detail 1618](results/Detail_log_1618_76251.png)
+![General 1622](results/General_log_1622_64296.png)
+![Detail 1622](results/Detail_log_1622_64296.png)
+![General 1626](results/General_log_1626_93118.png)
+![Detail 1626](results/Detail_log_1626_93118.png)
 
