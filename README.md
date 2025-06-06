@@ -204,9 +204,9 @@ Running the script creates a `results/` folder containing:
 
 ---
 
-## 11. Example Results
+## 11. Latest Results
 
-The table below is automatically updated from `results/performance.csv` whenever `filter_analysis.py` finishes running.
+The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis.
 
 <!-- RESULTS_TABLE_START -->
 | Filename       | Method   |    RMSE |     MAE |   Extrema_MAE |   Extrema_MAE_scaled |   MAPE_pk |   MAVE_vl |   Lag |   Ref_Angle |   Scale_k |   RMSE_scaled |   MAE_scaled |
