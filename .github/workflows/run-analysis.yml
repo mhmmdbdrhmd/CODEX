@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -16,9 +19,18 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run analysis
         run: python filter_analysis.py
-      - name: Upload plots
+      - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: plots
-          path: results/*.png
+          path: results/**
           if-no-files-found: ignore
+      - name: Commit results
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add results
+          if ! git diff --cached --quiet; then
+            git commit -m "Update analysis results [skip ci]"
+            git push
+          fi
