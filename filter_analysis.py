@@ -221,6 +221,13 @@ if __name__ == "__main__":
         "log_1626_93118": 32.0,
     }
 
+    # Prepare results directory and remove old plots so removed recordings
+    # disappear from the repository on the next commit
+    os.makedirs("results", exist_ok=True)
+    for f in os.listdir("results"):
+        if f.lower().endswith(".png"):
+            os.remove(os.path.join("results", f))
+
     # Initialize a list to collect metrics for all files
     all_metrics = []
 
