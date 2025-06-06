@@ -10,12 +10,17 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 # -----------------------------------------------------------------------------------
 # 1. Load & Preprocess Function
 # -----------------------------------------------------------------------------------
-def load_and_preprocess(path):
+def load_and_preprocess(path, offset=16.0):
+    """Load CSV and preprocess sensor, target, and speed columns.
+
+    The light-sensor sums include an ``offset`` (default 16) which can be
+    overridden per file. The function interpolates zero dropouts in the
+    reference angle, smooths speed, and applies a causal Hampel filter to
+    the raw angle proxy.
+    Returns a DataFrame with added columns: ``raw``, ``target_clean``,
+    ``speed``, and ``cleaned_raw``.
     """
-    Loads a semicolon-delimited CSV, computes raw angle from light sensors,
-    interpolates zero dropouts in target, preprocesses speed, and applies a Hampel filter on raw.
-    Returns a DataFrame with added columns: ['raw','target_clean','speed','cleaned_raw'].
-    """
+
     df = pd.read_csv(path, sep=';')
 
     # Identify relevant columns by regex
@@ -28,8 +33,8 @@ def load_and_preprocess(path):
 
     # Compute raw hitch-angle proxy:
     # raw = 90 + [ ((L - (L - R)/2) / (L*R)) * (L - (L - R)/2) * (L - R ) ] / (L - (L - R)/2) * 100
-    df['L'] = df[Lse] + df[Lbe] + 16
-    df['R'] = df[Rse] + df[Rbe] + 16
+    df['L'] = df[Lse] + df[Lbe] + offset
+    df['R'] = df[Rse] + df[Rbe] + offset
     df['raw'] = 90 + (((df.L - (df.L - df.R)/2) / (df.L * df.R)) *
                      (df.L - (df.L - df.R)/2) * (df.L - df.R)) / (
                      df.L - (df.L - df.R)/2) * 100
@@ -209,6 +214,11 @@ if __name__ == "__main__":
         "log_1626_93118": [100, 0],
     }
 
+    # Per-file sensor offset added to light sensor sums
+    sensor_offset = {
+        "log_1626_93118": 32.0,
+    }
+
     # Initialize a list to collect metrics for all files
     all_metrics = []
 
@@ -220,11 +230,13 @@ if __name__ == "__main__":
         file_path = os.path.join(recordings_dir, fname)
         print(f"\nProcessing recording: {fname}")
 
-        # 4.1 Load and preprocess
-        df = load_and_preprocess(file_path)
+        base = fname[:-4]
+        offset = sensor_offset.get(base, 16.0)
+
+        # 4.1 Load and preprocess with per-file offset
+        df = load_and_preprocess(file_path, offset=offset)
 
         # Trim beginning/end based on per-file settings
-        base = fname[:-4]
         if base in trim_seconds:
             start_trim, end_trim = trim_seconds[base]
             if start_trim > 0:

@@ -68,11 +68,12 @@ When you run the analysis script on any new recording:
    - Left‐sensor sums match `Durchschnitt_L_SE` and `Durchschnitt_L_Be_SE`.
    - Right‐sensor sums match `Durchschnitt_R_SE` and `Durchschnitt_R_Be_SE`.
 3. **Compute the raw proxy**:
-   - Define  
-     ```
-       L = (left‐sensor1 + left‐sensor2 + 16),
-       R = (right‐sensor1 + right‐sensor2 + 16).
-     ```
+  - Define
+    ```
+      offset = 16  # per-file light-sensor offset
+      L = (left‐sensor1 + left‐sensor2 + offset),
+      R = (right‐sensor1 + right‐sensor2 + offset).
+    ```
    - Compute  
      ```
        raw = 90 + (((L + R) / 2) * (L - R)) / (L * R) * 100.
@@ -142,6 +143,8 @@ After alignment:
 2. **Edit `filter_analysis.py`** if needed:
    - Adjust `exclude_first_seconds` (default = `None`).
    - Update the `trim_seconds` dictionary for per-file start/end trimming.
+   - Optionally define per-file light-sensor offsets via the `sensor_offset`
+     dictionary (default = `16`).
 3. **Run**:
    ```
    python filter_analysis.py
