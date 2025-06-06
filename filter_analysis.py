@@ -382,3 +382,6 @@ if __name__ == "__main__":
     ])
     print("\n=== Combined Performance Metrics for All Recordings ===")
     print(df_all_metrics.to_string(index=False))
+    os.makedirs("results", exist_ok=True)
+    df_all_metrics.to_csv("results/performance.csv", index=False)
+
