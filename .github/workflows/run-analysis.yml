@@ -29,7 +29,8 @@ jobs:
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
-          git add results
+          git add -A results README.md
+          git add -f results/*.png
           if ! git diff --cached --quiet; then
             git commit -m "Update analysis results [skip ci]"
             git push
