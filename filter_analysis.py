@@ -153,7 +153,8 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
         r = np.linspace(-1.0, 1.0, 200)
         ref_range = mid + width * np.sign(r) * np.abs(r) ** 1.5
     if k_range is None:
-        k_range = np.linspace(0.8, 1.2, 100)
+        # Expanded scale search (0.5..1.5) with finer resolution
+        k_range = np.linspace(0.5, 1.5, 200)
 
     mask = ~np.isnan(t) & ~np.isnan(y_al)
 
