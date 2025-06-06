@@ -209,23 +209,8 @@ Running the script creates a `results/` folder containing:
 The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis.
 
 <!-- RESULTS_TABLE_START -->
-| Filename       | Method   |    RMSE |     MAE |   Extrema_MAE |   Extrema_MAE_scaled |   MAPE_pk |   MAVE_vl |   Lag |   Ref_Angle |   Scale_k |   RMSE_scaled |   MAE_scaled |
-|:---------------|:---------|--------:|--------:|--------------:|---------------------:|----------:|----------:|------:|------------:|----------:|--------------:|-------------:|
-| log_1626_93118 | KF_inv   | 3.50013 | 2.72786 |       3.24046 |              1.82055 |   4.81845 |   1.78385 |    14 |     86.7324 |  1.29397  |       1.63688 |      1.1243  |
-| log_1626_93118 | SG       | 3.61859 | 2.75185 |       3.43375 |              1.75933 |   5.05427 |   1.93788 |     2 |     86.8341 |  1.29397  |       1.90762 |      1.27844 |
-| log_1626_93118 | KF_on_SG | 3.6728  | 2.76034 |       3.50694 |              1.67498 |   5.22371 |   1.92222 |     6 |     86.9135 |  1.29397  |       2.00796 |      1.34863 |
-| log_1618_76251 | KF_inv   | 2.47858 | 1.73186 |       3.42423 |              1.35454 |   2.27022 |   3.71274 |    19 |     94.418  |  0.876884 |       2.16629 |      1.36809 |
-| log_1618_76251 | SG       | 2.59131 | 1.90651 |       2.00123 |              1.57672 |   2.94572 |   1.7651  |     4 |     93.3878 |  0.886935 |       2.30534 |      1.48839 |
-| log_1618_76251 | KF_on_SG | 2.40439 | 1.80014 |       1.85107 |              1.89041 |   3.20227 |   1.51327 |    11 |     93.1637 |  0.88191  |       2.15722 |      1.39526 |
-| log_1622_64296 | KF_inv   | 3.13407 | 2.51597 |       2.41009 |              1.92347 |   2.38969 |   2.43168 |    10 |    106.716  |  0.91206  |       2.81522 |      1.99782 |
-| log_1622_64296 | SG       | 3.13703 | 2.46259 |       3.91841 |              3.6739  |   4.03643 |   3.79346 |    10 |    123.011  |  0.957286 |       2.8626  |      1.98251 |
-| log_1622_64296 | KF_on_SG | 3.09645 | 2.47268 |       4.08145 |              3.99556 |   4.63121 |   3.49934 |    12 |    127.293  |  0.962312 |       2.86606 |      2.00294 |
 <!-- RESULTS_TABLE_END -->
 
-![General 1618](results/General_log_1618_76251.png)
-![Detail 1618](results/Detail_log_1618_76251.png)
-![General 1622](results/General_log_1622_64296.png)
-![Detail 1622](results/Detail_log_1622_64296.png)
-![General 1626](results/General_log_1626_93118.png)
-![Detail 1626](results/Detail_log_1626_93118.png)
+<!-- RESULTS_PLOTS_START -->
+<!-- RESULTS_PLOTS_END -->
 

@@ -399,19 +399,42 @@ if __name__ == "__main__":
     os.makedirs("results", exist_ok=True)
     df_all_metrics.to_csv("results/performance.csv", index=False)
 
-    # Update README table between markers
+    # Update README results section
     try:
-        marker_start = "<!-- RESULTS_TABLE_START -->"
-        marker_end = "<!-- RESULTS_TABLE_END -->"
+        table_start = "<!-- RESULTS_TABLE_START -->"
+        table_end = "<!-- RESULTS_TABLE_END -->"
+        plots_start = "<!-- RESULTS_PLOTS_START -->"
+        plots_end = "<!-- RESULTS_PLOTS_END -->"
+
         with open("README.md", "r", encoding="utf-8") as f:
             lines = f.read().splitlines()
-        if marker_start in lines and marker_end in lines:
-            s = lines.index(marker_start)
-            e = lines.index(marker_end)
+
+        # Update performance table
+        if table_start in lines and table_end in lines:
+            s = lines.index(table_start)
+            e = lines.index(table_end)
             table_md = tabulate(df_all_metrics, headers="keys", tablefmt="pipe", showindex=False)
-            new_lines = lines[:s+1] + table_md.splitlines() + lines[e:]
-            with open("README.md", "w", encoding="utf-8") as f:
-                f.write("\n".join(new_lines) + "\n")
+            table_block = ["<details><summary>Performance Summary</summary>", ""] + table_md.splitlines() + ["</details>"]
+            lines = lines[:s+1] + table_block + lines[e:]
+
+        # Update plot subsections
+        if plots_start in lines and plots_end in lines:
+            s = lines.index(plots_start)
+            e = lines.index(plots_end)
+            file_sections = []
+            for fname in sorted(df_all_metrics['Filename'].unique()):
+                file_sections.extend([
+                    f"<details><summary>{fname}</summary>",
+                    "",
+                    f"![General {fname}](results/General_{fname}.png)",
+                    f"![Detail {fname}](results/Detail_{fname}.png)",
+                    "",
+                    "</details>"
+                ])
+            lines = lines[:s+1] + file_sections + lines[e:]
+
+        with open("README.md", "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
     except Exception as exc:
-        print(f"Failed to update README table: {exc}")
+        print(f"Failed to update README results: {exc}")
 
