@@ -278,16 +278,21 @@ Early versions of the filters produced a large extrema MAE, meaning peaks and
 valleys were often poorly matched even when overall error looked reasonable.
 To address this we performed a grid search for a simple linear scaling of each
 aligned filter. The "scaled" columns in the table show the best result of that
-search.
+search and often reduce the extrema MAE considerably.
 
 **Issues observed**
 
-a) The linear scale does not consistently help. For example the scaled output
-for `log_1622_85852` becomes worse around the 3800th second (segment 5),
-suggesting the data may be non-stationary.
+a) The linear scale does not consistently help across all segments. For
+`log_1622_85852`, for instance, the scaled output around the 3800th second
+(segment 5) actually worsens the error, implying the underlying relationship
+between the proxy and the true angle can change over time.
 
-b) The optimization used the entire file, so it is not causal. While many logs
-yield a reference around 80° with a scale near 1.1, others deviate markedly
-(e.g. scale <0.9 and reference >90°). Determining these parameters in real time
-and adapting them dynamically remains unsolved.
+b) The optimization currently uses the entire recording, which makes it
+noncausal. While many logs yield similar parameters (around 80° reference and
+scale about 1.1), others diverge substantially—some below 0.9 in scale and well
+above 90° in reference. This variation suggests the data may be non-stationary
+and that a single global scaling does not fit every file.
 
+In practice we need a causal method to estimate both reference angle and scale
+dynamically, adjusting to changing conditions without relying on future data.
+Finding a stable real-time solution is still an open challenge.
