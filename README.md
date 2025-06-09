@@ -70,17 +70,27 @@ When you run the analysis script on any new recording:
    - `Geschwindigkeit` (speed).
    - `Durchschnitt_L_SE` and `Durchschnitt_L_Be_SE` (left light-sensor sums).
    - `Durchschnitt_R_SE` and `Durchschnitt_R_Be_SE` (right light-sensor sums).
+   - Optional redundant sensors `Durchschnitt_L_SE2`, `Durchschnitt_L_Be_SE2`,
+     `Durchschnitt_R_SE2`, and `Durchschnitt_R_Be_SE2`.
 3. **Compute the raw proxy**:
-  - Define
+  - The script automatically checks if the redundant sensor columns contain any
+    non-zero values. If they do, the left and right sums include all four
+    sensors per side and a constant of ``32`` is added. If the redundant columns
+    are all zero the file is assumed to use only two sensors per side and a
+    constant of ``16``:
     ```
-      offset = 16  # per-file light-sensor offset
-      L = (left‐sensor1 + left‐sensor2 + offset),
-      R = (right‐sensor1 + right‐sensor2 + offset).
+    # Without redundant sensors
+    L = (L_SE + L_Be_SE) + 16
+    R = (R_SE + R_Be_SE) + 16
+
+    # With redundant sensors
+    L = (L_SE + L_SE2 + L_Be_SE + L_Be_SE2) + 32
+    R = (R_SE + R_SE2 + R_Be_SE + R_Be_SE2) + 32
     ```
-   - Compute  
-     ```
-       raw = 90 + (((L + R) / 2) * (L - R)) / (L * R) * 100.
-     ```
+  - The raw angle proxy is then
+    ```
+    raw = 90 + (((L + R) / 2) * (L - R)) / (L * R) * 100
+    ```
 4. **Clean the target**:
    - Replace zeros with NaN, then interpolate linearly (forward and backward).
 5. **Preprocess speed**:
@@ -146,8 +156,6 @@ After alignment:
 2. **Edit `filter_analysis.py`** if needed:
    - Adjust `exclude_first_seconds` (default = `None`).
    - Update the `trim_seconds` dictionary for per-file start/end trimming.
-   - Optionally define per-file light-sensor offsets via the `sensor_offset`
-     dictionary (default = `16`).
 3. **Run**:
    ```
    python filter_analysis.py

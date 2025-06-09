@@ -11,15 +11,22 @@ from tabulate import tabulate
 # -----------------------------------------------------------------------------------
 # 1. Load & Preprocess Function
 # -----------------------------------------------------------------------------------
-def load_and_preprocess(path, offset=16.0):
+def load_and_preprocess(path):
     """Load CSV and preprocess sensor, target, and speed columns.
 
-    The light-sensor sums include an ``offset`` (default 16) which can be
-    overridden per file. The function interpolates zero dropouts in the
-    reference angle, smooths speed, and applies a causal Hampel filter to
-    the raw angle proxy.
-    Returns a DataFrame with added columns: ``raw``, ``target_clean``,
-    ``speed``, and ``cleaned_raw``.
+    The function automatically detects whether redundant (RC) sensors were used
+    by checking the ``*SE2`` and ``*Be_SE2`` columns. Depending on that, the raw
+    left/right sums are computed with either 2 or 4 sensors per side. The raw
+    hitch angle proxy is then derived from these sums. The function also
+    interpolates zero dropouts in the reference angle, smooths speed, and
+    applies a causal Hampel filter to the raw signal.
+
+    Returns
+    -------
+    df : DataFrame
+        Preprocessed data with added columns ``raw`` and ``cleaned_raw``.
+    rc_used : bool
+        Whether redundant sensors were detected in this file.
     """
 
     df = pd.read_csv(path, sep=';')
@@ -32,13 +39,23 @@ def load_and_preprocess(path, offset=16.0):
     Rse = df.filter(regex='Durchschnitt_R_SE').columns[0]
     Rbe = df.filter(regex='Durchschnitt_R_[Bb]e_SE').columns[0]
 
-    # Compute raw hitch-angle proxy:
-    # raw = 90 + [ ((L - (L - R)/2) / (L*R)) * (L - (L - R)/2) * (L - R ) ] / (L - (L - R)/2) * 100
-    df['L'] = df[Lse] + df[Lbe] + offset
-    df['R'] = df[Rse] + df[Rbe] + offset
-    df['raw'] = 90 + (((df.L - (df.L - df.R)/2) / (df.L * df.R)) *
-                     (df.L - (df.L - df.R)/2) * (df.L - df.R)) / (
-                     df.L - (df.L - df.R)/2) * 100
+    # Determine whether redundant sensors were used (any non-zero in *SE2 columns)
+    Lse2 = df.filter(regex='Durchschnitt_L_SE2').columns[0]
+    Rse2 = df.filter(regex='Durchschnitt_R_SE2').columns[0]
+    Lbe2 = df.filter(regex='Durchschnitt_L_Be_SE2').columns[0]
+    Rbe2 = df.filter(regex='Durchschnitt_R_[Bb]e_SE2').columns[0]
+    rc_used = not df[[Lse2, Rse2, Lbe2, Rbe2]].eq(0).all().all()
+
+    if rc_used:
+        df['L'] = (df[Lse] + df[Lse2] + df[Lbe] + df[Lbe2]) + 32.0
+        df['R'] = (df[Rse] + df[Rse2] + df[Rbe] + df[Rbe2]) + 32.0
+    else:
+        df['L'] = df[Lse] + df[Lbe] + 16.0
+        df['R'] = df[Rse] + df[Rbe] + 16.0
+
+    # Raw hitch-angle proxy
+    df['raw'] = 90 + (((df['L'] + df['R']) / 2) * (df['L'] - df['R'])) / (
+        df['L'] * df['R']) * 100
 
     # Clean target: replace zeros with NaN, then interpolate
     df['target_clean'] = df[angle_col].replace(0, np.nan).interpolate(method='linear', limit_direction='both')
@@ -62,7 +79,7 @@ def load_and_preprocess(path, offset=16.0):
             x[i] = med
     df['cleaned_raw'] = x
 
-    return df
+    return df, rc_used
 
 # -----------------------------------------------------------------------------------
 # 2. Extrema Detection & Alignment Functions
@@ -216,11 +233,6 @@ if __name__ == "__main__":
         "log_1626_93118": [100, 0],
     }
 
-    # Per-file sensor offset added to light sensor sums
-    sensor_offset = {
-        "log_1626_93118": 32.0,
-    }
-
     # Initialize a list to collect metrics for all files
     all_metrics = []
 
@@ -233,10 +245,10 @@ if __name__ == "__main__":
         print(f"\nProcessing recording: {fname}")
 
         base = fname[:-4]
-        offset = sensor_offset.get(base, 16.0)
 
-        # 4.1 Load and preprocess with per-file offset
-        df = load_and_preprocess(file_path, offset=offset)
+        # 4.1 Load and preprocess with automatic RC detection
+        df, rc_used = load_and_preprocess(file_path)
+        print(f"  Redundant sensors used: {rc_used}")
 
         # Trim beginning/end based on per-file settings
         if base in trim_seconds:
