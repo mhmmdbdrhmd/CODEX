@@ -112,6 +112,20 @@ When you run the analysis script on any new recording:
 Once preprocessing is complete, the script applies one or more of the following filters to `cleaned_raw`:
 
 1. **KF_inv** (Speed‐Aware Kalman Filter)
+   - Implements a single-state discrete Kalman filter.
+   - `cleaned_raw` is used as the measurement input `x` and the preprocessed
+     vehicle speed `speed` serves as the control signal `v`.
+   - At each time step the process noise variance `Q` adapts based on the
+     inverse of the current speed:
+     `Q = 1e-2 + 1e-1 * (1 / max(v[i], 0.1))`.
+   - The measurement variance `R` is fixed at `1.0`.
+   - Starting from `y[0] = x[0]` and covariance `P[0] = 1`, the filter computes
+     the predicted covariance `Pp = P[i-1] + Q` and the Kalman gain
+     `K = Pp / (Pp + R)`.
+   - The updated state is `y[i] = y[i-1] + K * (x[i] - y[i-1])` with
+     `P[i] = (1 - K) * Pp`.
+   - Because `Q` is larger when speed is small, the filter responds more quickly
+     during slow manoeuvres while remaining smoother at higher speeds.
 2. **Savitzky–Golay (SG)**
 3. **KF_on_SG** (KF_inv applied to SG output)
 
