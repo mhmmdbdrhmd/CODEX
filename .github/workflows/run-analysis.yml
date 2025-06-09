@@ -27,11 +27,12 @@ jobs:
           path: results/**
           if-no-files-found: ignore
       - name: Commit results
+        if: github.event_name == 'push'
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
           git add -A results README.md
           if ! git diff --cached --quiet; then
             git commit -m "Update analysis results [skip ci]"
-            git push
+            git push origin HEAD:${GITHUB_REF#refs/heads/}
           fi
