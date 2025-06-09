@@ -233,6 +233,10 @@ if __name__ == "__main__":
         "log_1626_93118": [100, 0],
     }
 
+    # Filters to show in the generated plots. All filters are always computed
+    # for the performance table regardless of this list.
+    plot_filters = ["KF_inv"]
+
     # Initialize a list to collect metrics for all files
     all_metrics = []
 
@@ -316,21 +320,22 @@ if __name__ == "__main__":
             scaled[name] = y_scaled
 
         # 4.6 Plot General + Alignment for this file
-        kf_al, lag_kf, kf_al_scaled = aligned["KF_inv"]
-        sg_al, lag_sg, sg_al_scaled = aligned["SG"]
-        kf_on_sg_al, lag_kf_sg, kf_on_sg_al_scaled = aligned["KF_on_SG"]
         tp, tv = tp_all, tv_all
+
+        color_map = {"KF_inv": "k", "SG": "r", "KF_on_SG": "m"}
+        label_map = {"KF_inv": "KF_inv", "SG": "SG Filter", "KF_on_SG": "KF_on_SG"}
+        lw_map = {"KF_inv": 1.2, "SG": 1, "KF_on_SG": 1}
 
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
 
         # Top subplot: unaligned signals + speed
-        ax1.plot(idx, t_clean,    'b-', lw=1,   label='True')
-        ax1.plot(idx, kf_out,     'k-', lw=1.2, label='KF_inv')
-        ax1.plot(idx, sg_out,     'r-', lw=1,   label='SG Filter')
-        ax1.plot(idx, kf_on_sg_out,'m-', lw=1,  label='KF_on_SG')
-        ax1.plot(idx, scaled["KF_inv"],     'k:', lw=1, label='KF_inv_scaled')
-        ax1.plot(idx, scaled["SG"],         'r:', lw=1, label='SG_scaled')
-        ax1.plot(idx, scaled["KF_on_SG"],   'm:', lw=1, label='KF_on_SG_scaled')
+        ax1.plot(idx, t_clean, 'b-', lw=1, label='True')
+        outputs = {"KF_inv": kf_out, "SG": sg_out, "KF_on_SG": kf_on_sg_out}
+        for name in plot_filters:
+            ax1.plot(idx, outputs[name], color_map[name], lw=lw_map[name],
+                     label=label_map[name])
+            ax1.plot(idx, scaled[name], color_map[name], linestyle=':', lw=1,
+                     label=f'{name}_scaled')
         ax1.set_ylabel('Angle')
         ax1.set_title(f"General + Alignment: {fname[:-4]}")
         ax1.legend(loc='upper left')
@@ -340,13 +345,13 @@ if __name__ == "__main__":
         ax1_r.legend(loc='upper right')
 
         # Bottom subplot: aligned signals with true extrema markers + speed
-        ax2.plot(idx, t_clean,     'b-',  lw=1,   label='True')
-        ax2.plot(idx, kf_al,       'k--', lw=1.2, label=f'KF_aligned (lag={lag_kf})')
-        ax2.plot(idx, sg_al,       'r--', lw=1,   label=f'SG_aligned (lag={lag_sg})')
-        ax2.plot(idx, kf_on_sg_al, 'm--', lw=1,   label=f'KF_on_SG_aligned (lag={lag_kf_sg})')
-        ax2.plot(idx, kf_al_scaled,       'k:', lw=1, label='KF_inv_scaled')
-        ax2.plot(idx, sg_al_scaled,       'r:', lw=1, label='SG_scaled')
-        ax2.plot(idx, kf_on_sg_al_scaled, 'm:', lw=1, label='KF_on_SG_scaled')
+        ax2.plot(idx, t_clean, 'b-', lw=1, label='True')
+        for name in plot_filters:
+            y_al, lag, y_al_scaled = aligned[name]
+            ax2.plot(idx, y_al, color_map[name], linestyle='--', lw=lw_map[name],
+                     label=f'{name}_aligned (lag={lag})')
+            ax2.plot(idx, y_al_scaled, color_map[name], linestyle=':', lw=1,
+                     label=f'{name}_scaled')
         ax2.scatter(idx[tp], t_clean[tp],   c='cyan',   marker='o', label='True Peaks')
         ax2.scatter(idx[tv], t_clean[tv],   c='magenta', marker='x', label='True Valleys')
         ax2.set_xlabel('Index')
@@ -369,13 +374,10 @@ if __name__ == "__main__":
         fig, axes = plt.subplots(2, 3, figsize=(12, 6))
         for i, axd in enumerate(axes.flatten()):
             s, e = periods[i]
-            axd.plot(idx[s:e], t_clean[s:e],        'b-', lw=1)
-            axd.plot(idx[s:e], kf_out[s:e],         'k-', lw=1.2)
-            axd.plot(idx[s:e], scaled["KF_inv"][s:e], 'k:', lw=1)
-            axd.plot(idx[s:e], sg_out[s:e],         'r-', lw=1)
-            axd.plot(idx[s:e], scaled["SG"][s:e],   'r:', lw=1)
-            axd.plot(idx[s:e], kf_on_sg_out[s:e],   'm-', lw=1)
-            axd.plot(idx[s:e], scaled["KF_on_SG"][s:e], 'm:', lw=1)
+            axd.plot(idx[s:e], t_clean[s:e], 'b-', lw=1)
+            for name in plot_filters:
+                axd.plot(idx[s:e], outputs[name][s:e], color_map[name], lw=lw_map[name])
+                axd.plot(idx[s:e], scaled[name][s:e], color_map[name], linestyle=':', lw=1)
             axd.set_title(f"Segment {i+1}")
             axd.set_ylim(left_ylim)
             axd_r = axd.twinx()
@@ -383,18 +385,16 @@ if __name__ == "__main__":
             axd_r.set_ylim(right_ylim)
 
         fig.suptitle(f"Detail View (2×3): {fname[:-4]}", y=1.02)
-        legend_lines = [Line2D([0],[0],color='b'),
-                        Line2D([0],[0],color='k'),
-                        Line2D([0],[0],color='k', linestyle=':'),
-                        Line2D([0],[0],color='r'),
-                        Line2D([0],[0],color='r', linestyle=':'),
-                        Line2D([0],[0],color='m'),
-                        Line2D([0],[0],color='m', linestyle=':'),
-                        Line2D([0],[0],color='g')]
-        fig.legend(legend_lines,
-                   ['True','KF_inv','KF_inv_scaled','SG Filter','SG_scaled',
-                    'KF_on_SG','KF_on_SG_scaled','Speed'],
-                   loc='upper right')
+        legend_lines = [Line2D([0],[0],color='b')]
+        legend_labels = ['True']
+        for name in plot_filters:
+            legend_lines.append(Line2D([0],[0],color=color_map[name]))
+            legend_labels.append(label_map[name])
+            legend_lines.append(Line2D([0],[0],color=color_map[name], linestyle=':'))
+            legend_labels.append(f'{name}_scaled')
+        legend_lines.append(Line2D([0],[0],color='g'))
+        legend_labels.append('Speed')
+        fig.legend(legend_lines, legend_labels, loc='upper right')
         plt.tight_layout()
         fig.savefig("results/Detail_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
         plt.close(fig)
