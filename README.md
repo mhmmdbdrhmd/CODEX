@@ -1,3 +1,8 @@
+<p align="right">
+  <a href="README.md"><img src="https://img.shields.io/badge/EN-English-blue?style=for-the-badge" alt="English"></a>
+  <a href="README_GR.md"><img src="https://img.shields.io/badge/GR-Deutsch-red?style=for-the-badge" alt="Deutsch"></a>
+</p>
+
 
 # Angle Sensor Filtering & Extremum Tracking
 
