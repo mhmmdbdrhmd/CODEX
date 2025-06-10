@@ -418,35 +418,41 @@ if __name__ == "__main__":
         plots_start = "<!-- RESULTS_PLOTS_START -->"
         plots_end = "<!-- RESULTS_PLOTS_END -->"
 
-        with open("README.md", "r", encoding="utf-8") as f:
-            lines = f.read().splitlines()
+        def update_readme(path: str) -> None:
+            with open(path, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
 
-        # Update performance table
-        if table_start in lines and table_end in lines:
-            s = lines.index(table_start)
-            e = lines.index(table_end)
-            table_md = tabulate(df_all_metrics, headers="keys", tablefmt="pipe", showindex=False)
-            table_block = ["<details><summary>Performance Summary</summary>", ""] + table_md.splitlines() + ["</details>"]
-            lines = lines[:s+1] + table_block + lines[e:]
+            # Update performance table
+            if table_start in lines and table_end in lines:
+                s = lines.index(table_start)
+                e = lines.index(table_end)
+                table_md = tabulate(df_all_metrics, headers="keys", tablefmt="pipe", showindex=False)
+                table_block = ["<details><summary>Performance Summary</summary>", ""] + table_md.splitlines() + ["</details>"]
+                lines = lines[:s+1] + table_block + lines[e:]
 
-        # Update plot subsections
-        if plots_start in lines and plots_end in lines:
-            s = lines.index(plots_start)
-            e = lines.index(plots_end)
-            file_sections = []
-            for fname in sorted(df_all_metrics['Filename'].unique()):
-                file_sections.extend([
-                    f"<details><summary>{fname}</summary>",
-                    "",
-                    f"![General {fname}](results/General_{fname}.png)",
-                    f"![Detail {fname}](results/Detail_{fname}.png)",
-                    "",
-                    "</details>"
-                ])
-            lines = lines[:s+1] + file_sections + lines[e:]
+            # Update plot subsections
+            if plots_start in lines and plots_end in lines:
+                s = lines.index(plots_start)
+                e = lines.index(plots_end)
+                file_sections = []
+                for fname in sorted(df_all_metrics['Filename'].unique()):
+                    file_sections.extend([
+                        f"<details><summary>{fname}</summary>",
+                        "",
+                        f"![General {fname}](results/General_{fname}.png)",
+                        f"![Detail {fname}](results/Detail_{fname}.png)",
+                        "",
+                        "</details>"
+                    ])
+                lines = lines[:s+1] + file_sections + lines[e:]
 
-        with open("README.md", "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+
+        # Update both English and German READMEs
+        for readme in ["README.md", "README_GR.md"]:
+            if os.path.exists(readme):
+                update_readme(readme)
     except Exception as exc:
         print(f"Failed to update README results: {exc}")
 
