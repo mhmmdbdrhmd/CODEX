@@ -8,6 +8,10 @@ from scipy.signal import find_peaks, savgol_filter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tabulate import tabulate
 
+# Fixed ranges for the Extrema MAE heatmaps
+HEATMAP_REF_RANGE = np.linspace(60.0, 130.0, 100)
+HEATMAP_SCALE_RANGE = np.linspace(0.5, 1.5, 100)
+
 # -----------------------------------------------------------------------------------
 # 1. Load & Preprocess Function
 # -----------------------------------------------------------------------------------
@@ -168,11 +172,11 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
         lo, hi = np.nanmin(y_al), np.nanmax(y_al)
         mid = (lo + hi) / 2.0
         width = (hi - lo) / 2.0
-        r = np.linspace(-1.0, 1.0, 200)
+        r = np.linspace(-1.0, 1.0, 50)
         ref_range = mid + width * np.sign(r) * np.abs(r) ** 1.5
     if k_range is None:
         # Expanded scale search (0.5..1.5) with finer resolution
-        k_range = np.linspace(0.5, 1.5, 200)
+        k_range = np.linspace(0.5, 1.5, 50)
 
     mask = ~np.isnan(t) & ~np.isnan(y_al)
 
@@ -198,24 +202,16 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
 # ------------------------------------------------------------------------------
 # Helper: Compute grid of Extrema MAE for heatmap
 # ------------------------------------------------------------------------------
-def extrema_mae_grid(t, y_al, ext_idx, ref_range=None, k_range=None):
-    """Return matrix of Extrema MAE for each (ref, scale) pair."""
-    if ref_range is None:
-        lo, hi = np.nanmin(y_al), np.nanmax(y_al)
-        mid = (lo + hi) / 2.0
-        width = (hi - lo) / 2.0
-        r = np.linspace(-1.0, 1.0, 100)
-        ref_range = mid + width * np.sign(r) * np.abs(r) ** 1.5
-    if k_range is None:
-        k_range = np.linspace(0.5, 1.5, 100)
-
+def extrema_mae_grid(t, y_al, ext_idx, ref_range, k_range, baseline=1.0):
+    """Return matrix of normalized Extrema MAE for each (ref, scale) pair."""
     grid = np.zeros((len(ref_range), len(k_range)))
     lo, hi = np.nanmin(y_al), np.nanmax(y_al)
     for i, ref in enumerate(ref_range):
         ref_c = np.clip(ref, lo, hi)
         for j, k in enumerate(k_range):
             scaled = k * (y_al - ref_c) + ref_c
-            grid[i, j] = mean_absolute_error(t[ext_idx], scaled[ext_idx])
+            err = mean_absolute_error(t[ext_idx], scaled[ext_idx])
+            grid[i, j] = err / baseline if baseline else np.nan
 
     return grid, ref_range, k_range
 
@@ -309,6 +305,7 @@ if __name__ == "__main__":
         params = {}
         aligned = {}
         scaled = {}
+        ext_maes = {}
         tp_all = tv_all = None
 
         for name, y in [("KF_inv", kf_out), ("SG", sg_out), ("KF_on_SG", kf_on_sg_out)]:
@@ -335,6 +332,8 @@ if __name__ == "__main__":
             all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, ext_mae_scaled,
                                 mape_pk, mave_vl, lag, ref_opt, k_opt,
                                 rmse_scaled, mae_scaled))
+
+            ext_maes[name] = ext_mae
 
             print(f"  {name}: MAE={mae:.3f}, ExtMAE={ext_mae:.3f}, "
                   f"MAE_scaled={mae_scaled:.3f}, ExtMAE_scaled={ext_mae_scaled:.3f}")
@@ -426,8 +425,16 @@ if __name__ == "__main__":
         # 4.8 Plot heatmap of Extrema MAE over scaling parameters
         heat_filter = plot_filters[0] if plot_filters else "KF_inv"
         y_al_heat, _, _ = aligned[heat_filter]
+        baseline = ext_maes.get(heat_filter, np.nan)
         ext_idx = np.concatenate([tp, tv])
-        grid, rr, kk = extrema_mae_grid(t_clean, y_al_heat, ext_idx)
+        grid, rr, kk = extrema_mae_grid(
+            t_clean,
+            y_al_heat,
+            ext_idx,
+            HEATMAP_REF_RANGE,
+            HEATMAP_SCALE_RANGE,
+            baseline=baseline,
+        )
         fig, ax = plt.subplots(figsize=(8, 6))
         im = ax.imshow(
             grid,
@@ -438,9 +445,9 @@ if __name__ == "__main__":
         )
         ax.set_xlabel("Scale k")
         ax.set_ylabel("Reference angle")
-        ax.set_title(f"Extrema MAE Heatmap: {fname[:-4]}")
+        ax.set_title(f"Normalized Extrema MAE Heatmap: {fname[:-4]}")
         cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label("Extrema MAE")
+        cbar.set_label("Normalized Extrema MAE")
         plt.tight_layout()
         fig.savefig("results/Heatmap_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
         plt.close(fig)
