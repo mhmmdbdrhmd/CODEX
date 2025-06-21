@@ -446,20 +446,35 @@ if __name__ == "__main__":
             "Normalized MAE (masked)",
         ]
         data_mats = [grid_raw, grid_norm, mask_raw, mask_norm]
+
+        vmin_raw, vmax_raw = np.nanmin(grid_raw), np.nanmax(grid_raw)
+        vmin_norm, vmax_norm = np.nanmin(grid_norm), np.nanmax(grid_norm)
+
+        images = []
         for ax, data, title in zip(axes.flat, data_mats, titles):
+            if title.startswith("Raw"):
+                vmin, vmax = vmin_raw, vmax_raw
+            else:
+                vmin, vmax = vmin_norm, vmax_norm
+
             im = ax.imshow(
                 data,
                 origin="lower",
                 aspect="auto",
                 extent=[kk[0], kk[-1], rr[0], rr[-1]],
                 cmap="viridis",
+                vmin=vmin,
+                vmax=vmax,
             )
             if isinstance(data, np.ma.MaskedArray):
                 im.cmap.set_bad("black")
             ax.set_xlabel("Scale k")
             ax.set_ylabel("Reference angle")
             ax.set_title(title)
-            fig.colorbar(im, ax=ax).set_label(title)
+            images.append(im)
+
+        fig.colorbar(images[0], ax=[axes[0,0], axes[1,0]]).set_label("Raw Extrema MAE")
+        fig.colorbar(images[1], ax=[axes[0,1], axes[1,1]]).set_label("Normalized Extrema MAE")
         fig.suptitle(f"Extrema MAE Heatmaps (KF_inv): {fname[:-4]}")
         plt.tight_layout()
         fig.savefig("results/Heatmap_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
