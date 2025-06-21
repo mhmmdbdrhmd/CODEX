@@ -182,9 +182,10 @@ After alignment:
    python filter_analysis.py
    ```
    - The console prints performance metrics.
-   - Two figures appear:
+   - Three figures appear:
      1. **General + Alignment** (two‐subplot).
      2. **Detail View** (2×3).
+     3. **Extrema MAE Heatmap** showing scale vs. reference.
 
 4. **Add new recordings**:
    - Just drop additional CSVs into `recordings/` and run the script again.
@@ -207,6 +208,7 @@ Running the script creates a `results/` folder containing:
 - `performance.csv` – table of metrics for every recording and method.
 - `General_<recording>.png` – overview plot with alignment.
 - `Detail_<recording>.png` – zoomed detail view.
+- `Heatmap_<recording>.png` – heatmap of Extrema MAE over scale and reference.
 
 `performance.csv` columns:
 
@@ -228,7 +230,7 @@ Running the script creates a `results/` folder containing:
 
 ## 10. Latest Results
 
-The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis.
+The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis. Each recording also includes a heatmap showing how `Extrema_MAE` varies with reference angle and scale.
 
 <!-- RESULTS_TABLE_START -->
 <details><summary>Performance Summary</summary>
