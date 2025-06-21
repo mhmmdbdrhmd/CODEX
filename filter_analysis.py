@@ -172,11 +172,11 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
         lo, hi = np.nanmin(y_al), np.nanmax(y_al)
         mid = (lo + hi) / 2.0
         width = (hi - lo) / 2.0
-        r = np.linspace(-1.0, 1.0, 50)
+        r = np.linspace(-1.0, 1.0, 200)
         ref_range = mid + width * np.sign(r) * np.abs(r) ** 1.5
     if k_range is None:
         # Expanded scale search (0.5..1.5) with finer resolution
-        k_range = np.linspace(0.5, 1.5, 50)
+        k_range = np.linspace(0.5, 1.5, 200)
 
     mask = ~np.isnan(t) & ~np.isnan(y_al)
 
@@ -202,16 +202,15 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
 # ------------------------------------------------------------------------------
 # Helper: Compute grid of Extrema MAE for heatmap
 # ------------------------------------------------------------------------------
-def extrema_mae_grid(t, y_al, ext_idx, ref_range, k_range, baseline=1.0):
-    """Return matrix of normalized Extrema MAE for each (ref, scale) pair."""
+def extrema_mae_grid(t, y_al, ext_idx, ref_range, k_range):
+    """Return matrix of Extrema MAE for each (ref, scale) pair."""
     grid = np.zeros((len(ref_range), len(k_range)))
     lo, hi = np.nanmin(y_al), np.nanmax(y_al)
     for i, ref in enumerate(ref_range):
         ref_c = np.clip(ref, lo, hi)
         for j, k in enumerate(k_range):
             scaled = k * (y_al - ref_c) + ref_c
-            err = mean_absolute_error(t[ext_idx], scaled[ext_idx])
-            grid[i, j] = err / baseline if baseline else np.nan
+            grid[i, j] = mean_absolute_error(t[ext_idx], scaled[ext_idx])
 
     return grid, ref_range, k_range
 
@@ -426,28 +425,42 @@ if __name__ == "__main__":
         heat_filter = plot_filters[0] if plot_filters else "KF_inv"
         y_al_heat, _, _ = aligned[heat_filter]
         baseline = ext_maes.get(heat_filter, np.nan)
-        ext_idx = np.concatenate([tp, tv])
-        grid, rr, kk = extrema_mae_grid(
+        ext_idx = np.concatenate([tp_all, tv_all])
+        grid_raw, rr, kk = extrema_mae_grid(
             t_clean,
             y_al_heat,
             ext_idx,
             HEATMAP_REF_RANGE,
             HEATMAP_SCALE_RANGE,
-            baseline=baseline,
         )
-        fig, ax = plt.subplots(figsize=(8, 6))
-        im = ax.imshow(
-            grid,
-            origin="lower",
-            aspect="auto",
-            extent=[kk[0], kk[-1], rr[0], rr[-1]],
-            cmap="viridis",
-        )
-        ax.set_xlabel("Scale k")
-        ax.set_ylabel("Reference angle")
-        ax.set_title(f"Normalized Extrema MAE Heatmap: {fname[:-4]}")
-        cbar = fig.colorbar(im, ax=ax)
-        cbar.set_label("Normalized Extrema MAE")
+        grid_norm = grid_raw / baseline if baseline else grid_raw
+
+        mask_raw = np.ma.array(grid_raw, mask=grid_raw > baseline)
+        mask_norm = np.ma.array(grid_norm, mask=grid_norm > 1.0)
+
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        titles = [
+            "Raw Extrema MAE",
+            "Normalized Extrema MAE",
+            "Raw MAE (masked)",
+            "Normalized MAE (masked)",
+        ]
+        data_mats = [grid_raw, grid_norm, mask_raw, mask_norm]
+        for ax, data, title in zip(axes.flat, data_mats, titles):
+            im = ax.imshow(
+                data,
+                origin="lower",
+                aspect="auto",
+                extent=[kk[0], kk[-1], rr[0], rr[-1]],
+                cmap="viridis",
+            )
+            if isinstance(data, np.ma.MaskedArray):
+                im.cmap.set_bad("black")
+            ax.set_xlabel("Scale k")
+            ax.set_ylabel("Reference angle")
+            ax.set_title(title)
+            fig.colorbar(im, ax=ax).set_label(title)
+        fig.suptitle(f"Extrema MAE Heatmaps (KF_inv): {fname[:-4]}")
         plt.tight_layout()
         fig.savefig("results/Heatmap_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
         plt.close(fig)

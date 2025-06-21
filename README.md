@@ -185,7 +185,7 @@ After alignment:
    - Three figures appear:
      1. **General + Alignment** (two‐subplot).
      2. **Detail View** (2×3).
-    3. **Normalized Extrema MAE Heatmap** showing scale vs. reference (axes are identical for all files).
+   3. **Extrema MAE Heatmap** with four subplots (raw, normalized, and masked variants) using the `KF_inv` method.
 
 4. **Add new recordings**:
    - Just drop additional CSVs into `recordings/` and run the script again.
@@ -208,7 +208,7 @@ Running the script creates a `results/` folder containing:
 - `performance.csv` – table of metrics for every recording and method.
 - `General_<recording>.png` – overview plot with alignment.
 - `Detail_<recording>.png` – zoomed detail view.
-- `Heatmap_<recording>.png` – heatmap of normalized Extrema MAE over scale and reference.
+- `Heatmap_<recording>.png` – four-panel Extrema MAE heatmap derived from `KF_inv`.
 
 `performance.csv` columns:
 
@@ -230,7 +230,7 @@ Running the script creates a `results/` folder containing:
 
 ## 10. Latest Results
 
-The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis. Each recording also includes a heatmap showing how the `Extrema_MAE` ratio changes with reference angle and scale.
+The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis. Each recording also includes a four-panel heatmap summarizing `Extrema_MAE` across reference and scale.
 
 <!-- RESULTS_TABLE_START -->
 <details><summary>Performance Summary</summary>
