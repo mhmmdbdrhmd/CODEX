@@ -8,3 +8,6 @@
   of `results/` (PNG plots and `performance.csv`) after each run.
 - Do **not** manually commit these result files yourself—
   let the workflow handle them.
+- When modifying `README.md`, ensure that the logic in
+  `filter_analysis.py` which updates the results section still works and
+  adjust it if needed.

@@ -210,6 +210,25 @@ Running the script creates a `results/` folder containing:
 - `Detail_<recording>.png` – zoomed detail view.
 - `Heatmap_<recording>.png` – four-panel Extrema MAE heatmap derived from `KF_inv`.
 
+### Interpreting the heatmap
+
+Each heatmap visualizes how the peak/valley error changes when the aligned
+`KF_inv` output is rescaled by a **reference angle** (vertical axis) and a
+**scale factor** (horizontal axis). For every `(ref, scale)` combination the
+script computes the mean absolute error at the true peaks and valleys. This
+error surface is shown in four different ways:
+
+1. **Raw Extrema MAE** – absolute errors in degrees.
+2. **Normalized Extrema MAE** – the raw errors divided by the baseline error
+   (no scaling). Values below `1` indicate improvement over the unscaled output.
+3. **Raw MAE (masked)** – same as (1) but cells worse than the baseline are
+   hidden (black) to highlight beneficial regions.
+4. **Normalized MAE (masked)** – normalized errors with values greater than `1`
+   masked out.
+
+The default ranges (60–130° for reference and 0.5–1.5 for scale) are defined in
+`filter_analysis.py` and can be adjusted if needed.
+
 `performance.csv` columns:
 
 | Column | Meaning |
