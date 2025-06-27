@@ -182,9 +182,10 @@ After alignment:
    python filter_analysis.py
    ```
    - The console prints performance metrics.
-   - Two figures appear:
+   - Three figures appear:
      1. **General + Alignment** (two‐subplot).
      2. **Detail View** (2×3).
+   3. **Extrema MAE Heatmap** with four subplots (raw, normalized, and masked variants) using the `KF_inv` method.
 
 4. **Add new recordings**:
    - Just drop additional CSVs into `recordings/` and run the script again.
@@ -207,6 +208,7 @@ Running the script creates a `results/` folder containing:
 - `performance.csv` – table of metrics for every recording and method.
 - `General_<recording>.png` – overview plot with alignment.
 - `Detail_<recording>.png` – zoomed detail view.
+- `Heatmap_<recording>.png` – four-panel Extrema MAE heatmap derived from `KF_inv`.
 
 `performance.csv` columns:
 
@@ -228,28 +230,28 @@ Running the script creates a `results/` folder containing:
 
 ## 10. Latest Results
 
-The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis.
+The table and figures below are updated by the GitHub Actions workflow on every push that runs `filter_analysis.py`. The workflow regenerates `results/performance.csv` and all plots in `results/`, ensuring this section always reflects the latest CI analysis. Each recording also includes a four-panel heatmap summarizing `Extrema_MAE` across reference and scale.
 
 <!-- RESULTS_TABLE_START -->
 <details><summary>Performance Summary</summary>
 
 | Filename       | Method   |    RMSE |     MAE |   Extrema_MAE |   Extrema_MAE_scaled |   MAPE_pk |   MAVE_vl |   Lag |   Ref_Angle |   Scale_k |   RMSE_scaled |   MAE_scaled |
 |:---------------|:---------|--------:|--------:|--------------:|---------------------:|----------:|----------:|------:|------------:|----------:|--------------:|-------------:|
-| log_1626_30685 | KF_inv   | 2.09207 | 1.47532 |       2.00824 |              1.8956  |   2.37958 |   1.53374 |    12 |     87.2437 |  1.13819  |       1.6983  |     1.13077  |
-| log_1626_30685 | SG       | 2.85092 | 1.95532 |       4.24686 |              4.12059 |   3.95365 |   4.62151 |    11 |     87.9156 |  1.17337  |       2.57037 |     1.56714  |
-| log_1626_30685 | KF_on_SG | 2.75474 | 1.85532 |       4.40672 |              4.21594 |   4.21663 |   4.64961 |    14 |     88.1205 |  1.16834  |       2.34164 |     1.41837  |
-| log_1622_85852 | KF_inv   | 2.46887 | 1.87185 |       1.96114 |              1.18754 |   2.38705 |   1.42877 |     9 |     84.133  |  1.12814  |       1.96087 |     1.44964  |
-| log_1622_85852 | SG       | 2.53055 | 1.88825 |       3.48735 |              2.3782  |   3.60956 |   3.33459 |     5 |     86.036  |  1.16332  |       1.8855  |     1.29298  |
-| log_1622_85852 | KF_on_SG | 2.80495 | 2.06362 |       4.05899 |              2.8454  |   4.27546 |   3.78839 |     9 |     86.449  |  1.17839  |       2.1852  |     1.47277  |
-| log_1626_93118 | KF_inv   | 2.22865 | 1.83955 |       2.13766 |              1.36548 |   2.91195 |   1.42293 |    13 |     79.7324 |  1.10804  |       1.26134 |     0.880858 |
-| log_1626_93118 | SG       | 2.51369 | 1.96083 |       2.21602 |              1.31971 |   2.94388 |   1.54414 |     0 |     80.0734 |  1.10302  |       1.73417 |     1.13224  |
-| log_1626_93118 | KF_on_SG | 2.606   | 2.00142 |       2.29233 |              1.2492  |   3.12408 |   1.52455 |     4 |     80.2976 |  1.10302  |       1.87042 |     1.21471  |
-| log_1618_76251 | KF_inv   | 2.47858 | 1.73186 |       3.42423 |              1.35454 |   2.27022 |   3.71274 |    19 |     94.418  |  0.876884 |       2.16629 |     1.36809  |
-| log_1618_76251 | SG       | 2.59131 | 1.90651 |       2.00123 |              1.57672 |   2.94572 |   1.7651  |     4 |     93.3878 |  0.886935 |       2.30534 |     1.48839  |
-| log_1618_76251 | KF_on_SG | 2.40439 | 1.80014 |       1.85107 |              1.89041 |   3.20227 |   1.51327 |    11 |     93.1637 |  0.88191  |       2.15722 |     1.39526  |
-| log_1622_64296 | KF_inv   | 3.13407 | 2.51597 |       2.41009 |              1.92347 |   2.38969 |   2.43168 |    10 |    106.716  |  0.91206  |       2.81522 |     1.99782  |
-| log_1622_64296 | SG       | 3.13703 | 2.46259 |       3.91841 |              3.6739  |   4.03643 |   3.79346 |    10 |    123.011  |  0.957286 |       2.8626  |     1.98251  |
-| log_1622_64296 | KF_on_SG | 3.09645 | 2.47268 |       4.08145 |              3.99556 |   4.63121 |   3.49934 |    12 |    127.293  |  0.962312 |       2.86606 |     2.00294  |
+| log_1618_76251 | KF_inv   | 2.47858 | 1.73186 |       3.42423 |              1.29539 |   2.27022 |   3.71274 |    19 |     94.418  |  0.867347 |       2.18408 |     1.37048  |
+| log_1618_76251 | SG       | 2.59131 | 1.90651 |       2.00123 |              1.55931 |   2.94572 |   1.7651  |     4 |     93.3878 |  0.887755 |       2.30495 |     1.48846  |
+| log_1618_76251 | KF_on_SG | 2.40439 | 1.80014 |       1.85107 |              1.76861 |   3.20227 |   1.51327 |    11 |     93.1637 |  0.887755 |       2.15115 |     1.39678  |
+| log_1622_85852 | KF_inv   | 2.46887 | 1.87185 |       1.96114 |              1.21081 |   2.38705 |   1.42877 |     9 |     84.1413 |  1.13265  |       1.96038 |     1.45094  |
+| log_1622_85852 | SG       | 2.53055 | 1.88825 |       3.48735 |              2.41057 |   3.60956 |   3.33459 |     5 |     86.5115 |  1.17347  |       1.89668 |     1.29419  |
+| log_1622_85852 | KF_on_SG | 2.80495 | 2.06362 |       4.05899 |              2.83376 |   4.27546 |   3.78839 |     9 |     86.4873 |  1.17347  |       2.18772 |     1.47361  |
+| log_1626_93118 | KF_inv   | 2.22865 | 1.83955 |       2.13766 |              1.36887 |   2.91195 |   1.42293 |    13 |     80.5784 |  1.11224  |       1.26738 |     0.881841 |
+| log_1626_93118 | SG       | 2.51369 | 1.96083 |       2.21602 |              1.30091 |   2.94388 |   1.54414 |     0 |     80.5596 |  1.11224  |       1.74674 |     1.13649  |
+| log_1626_93118 | KF_on_SG | 2.606   | 2.00142 |       2.29233 |              1.25904 |   3.12408 |   1.52455 |     4 |     81.6966 |  1.11224  |       1.88278 |     1.21904  |
+| log_1622_64296 | KF_inv   | 3.13407 | 2.51597 |       2.41009 |              1.93043 |   2.38969 |   2.43168 |    10 |    105.691  |  0.908163 |       2.82166 |     1.99882  |
+| log_1622_64296 | SG       | 3.13703 | 2.46259 |       3.91841 |              3.66967 |   4.03643 |   3.79346 |    10 |    117.957  |  0.94898  |       2.8645  |     1.98493  |
+| log_1622_64296 | KF_on_SG | 3.09645 | 2.47268 |       4.08145 |              3.98822 |   4.63121 |   3.49934 |    12 |    129.396  |  0.969388 |       2.85577 |     2.01344  |
+| log_1626_30685 | KF_inv   | 2.09207 | 1.47532 |       2.00824 |              1.87087 |   2.37958 |   1.53374 |    12 |     86.7927 |  1.13265  |       1.69887 |     1.13277  |
+| log_1626_30685 | SG       | 2.85092 | 1.95532 |       4.24686 |              4.12027 |   3.95365 |   4.62151 |    11 |     87.9362 |  1.17347  |       2.57031 |     1.5671   |
+| log_1626_30685 | KF_on_SG | 2.75474 | 1.85532 |       4.40672 |              4.24798 |   4.21663 |   4.64961 |    14 |     87.9471 |  1.17347  |       2.34827 |     1.41894  |
 </details>
 <!-- RESULTS_TABLE_END -->
 
@@ -258,30 +260,35 @@ The table and figures below are updated by the GitHub Actions workflow on every 
 
 ![General log_1618_76251](results/General_log_1618_76251.png)
 ![Detail log_1618_76251](results/Detail_log_1618_76251.png)
+![Heatmap log_1618_76251](results/Heatmap_log_1618_76251.png)
 
 </details>
 <details><summary>log_1622_64296</summary>
 
 ![General log_1622_64296](results/General_log_1622_64296.png)
 ![Detail log_1622_64296](results/Detail_log_1622_64296.png)
+![Heatmap log_1622_64296](results/Heatmap_log_1622_64296.png)
 
 </details>
 <details><summary>log_1622_85852</summary>
 
 ![General log_1622_85852](results/General_log_1622_85852.png)
 ![Detail log_1622_85852](results/Detail_log_1622_85852.png)
+![Heatmap log_1622_85852](results/Heatmap_log_1622_85852.png)
 
 </details>
 <details><summary>log_1626_30685</summary>
 
 ![General log_1626_30685](results/General_log_1626_30685.png)
 ![Detail log_1626_30685](results/Detail_log_1626_30685.png)
+![Heatmap log_1626_30685](results/Heatmap_log_1626_30685.png)
 
 </details>
 <details><summary>log_1626_93118</summary>
 
 ![General log_1626_93118](results/General_log_1626_93118.png)
 ![Detail log_1626_93118](results/Detail_log_1626_93118.png)
+![Heatmap log_1626_93118](results/Heatmap_log_1626_93118.png)
 
 </details>
 <!-- RESULTS_PLOTS_END -->

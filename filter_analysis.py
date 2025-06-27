@@ -8,6 +8,10 @@ from scipy.signal import find_peaks, savgol_filter
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tabulate import tabulate
 
+# Fixed ranges for the Extrema MAE heatmaps
+HEATMAP_REF_RANGE = np.linspace(60.0, 130.0, 100)
+HEATMAP_SCALE_RANGE = np.linspace(0.5, 1.5, 100)
+
 # -----------------------------------------------------------------------------------
 # 1. Load & Preprocess Function
 # -----------------------------------------------------------------------------------
@@ -195,6 +199,21 @@ def optimize_scaling(t, y_al, ext_idx, ref_range=None, k_range=None):
 
     return best_scaled, best_ref, best_k, best_mae
 
+# ------------------------------------------------------------------------------
+# Helper: Compute grid of Extrema MAE for heatmap
+# ------------------------------------------------------------------------------
+def extrema_mae_grid(t, y_al, ext_idx, ref_range, k_range):
+    """Return matrix of Extrema MAE for each (ref, scale) pair."""
+    grid = np.zeros((len(ref_range), len(k_range)))
+    lo, hi = np.nanmin(y_al), np.nanmax(y_al)
+    for i, ref in enumerate(ref_range):
+        ref_c = np.clip(ref, lo, hi)
+        for j, k in enumerate(k_range):
+            scaled = k * (y_al - ref_c) + ref_c
+            grid[i, j] = mean_absolute_error(t[ext_idx], scaled[ext_idx])
+
+    return grid, ref_range, k_range
+
 # -----------------------------------------------------------------------------------
 # 3. KF_inv (Speed‐Aware Kalman Filter)
 # -----------------------------------------------------------------------------------
@@ -285,6 +304,7 @@ if __name__ == "__main__":
         params = {}
         aligned = {}
         scaled = {}
+        ext_maes = {}
         tp_all = tv_all = None
 
         for name, y in [("KF_inv", kf_out), ("SG", sg_out), ("KF_on_SG", kf_on_sg_out)]:
@@ -311,6 +331,8 @@ if __name__ == "__main__":
             all_metrics.append((fname[:-4], name, rmse, mae, ext_mae, ext_mae_scaled,
                                 mape_pk, mave_vl, lag, ref_opt, k_opt,
                                 rmse_scaled, mae_scaled))
+
+            ext_maes[name] = ext_mae
 
             print(f"  {name}: MAE={mae:.3f}, ExtMAE={ext_mae:.3f}, "
                   f"MAE_scaled={mae_scaled:.3f}, ExtMAE_scaled={ext_mae_scaled:.3f}")
@@ -399,6 +421,50 @@ if __name__ == "__main__":
         fig.savefig("results/Detail_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
         plt.close(fig)
 
+        # 4.8 Plot heatmap of Extrema MAE over scaling parameters
+        heat_filter = plot_filters[0] if plot_filters else "KF_inv"
+        y_al_heat, _, _ = aligned[heat_filter]
+        baseline = ext_maes.get(heat_filter, np.nan)
+        ext_idx = np.concatenate([tp_all, tv_all])
+        grid_raw, rr, kk = extrema_mae_grid(
+            t_clean,
+            y_al_heat,
+            ext_idx,
+            HEATMAP_REF_RANGE,
+            HEATMAP_SCALE_RANGE,
+        )
+        grid_norm = grid_raw / baseline if baseline else grid_raw
+
+        mask_raw = np.ma.array(grid_raw, mask=grid_raw > baseline)
+        mask_norm = np.ma.array(grid_norm, mask=grid_norm > 1.0)
+
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        titles = [
+            "Raw Extrema MAE",
+            "Normalized Extrema MAE",
+            "Raw MAE (masked)",
+            "Normalized MAE (masked)",
+        ]
+        data_mats = [grid_raw, grid_norm, mask_raw, mask_norm]
+        for ax, data, title in zip(axes.flat, data_mats, titles):
+            im = ax.imshow(
+                data,
+                origin="lower",
+                aspect="auto",
+                extent=[kk[0], kk[-1], rr[0], rr[-1]],
+                cmap="viridis",
+            )
+            if isinstance(data, np.ma.MaskedArray):
+                im.cmap.set_bad("black")
+            ax.set_xlabel("Scale k")
+            ax.set_ylabel("Reference angle")
+            ax.set_title(title)
+            fig.colorbar(im, ax=ax).set_label(title)
+        fig.suptitle(f"Extrema MAE Heatmaps (KF_inv): {fname[:-4]}")
+        plt.tight_layout()
+        fig.savefig("results/Heatmap_"+fname[:-4]+".png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
 
     # 4.8 After processing all files, display combined metrics
     df_all_metrics = pd.DataFrame(all_metrics, columns=[
@@ -440,6 +506,7 @@ if __name__ == "__main__":
                     "",
                     f"![General {fname}](results/General_{fname}.png)",
                     f"![Detail {fname}](results/Detail_{fname}.png)",
+                    f"![Heatmap {fname}](results/Heatmap_{fname}.png)",
                     "",
                     "</details>"
                 ])
