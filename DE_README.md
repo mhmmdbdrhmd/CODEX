@@ -3,6 +3,7 @@
 <a href="README.md">EN</a> | <a href="DE_README.md"><strong>DE</strong></a>
 </p>
 <!-- LANGUAGE TOGGLE END -->
+
 # Winkel­sensor‑Filterung & Extremum‑Verfolgung
 
 ## Übersicht
