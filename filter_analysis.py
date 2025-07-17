@@ -48,7 +48,7 @@ def load_and_preprocess(path):
     Rse2 = df.filter(regex='Durchschnitt_R_SE2').columns[0]
     Lbe2 = df.filter(regex='Durchschnitt_L_Be_SE2').columns[0]
     Rbe2 = df.filter(regex='Durchschnitt_R_[Bb]e_SE2').columns[0]
-    rc_used = not df[[Lse2, Rse2, Lbe2, Rbe2]].eq(0).all().all()
+    rc_used = not df[[Lse2, Rse2, Lbe2, Rbe2]].eq(0).to_numpy().all()
 
     if rc_used:
         df['L'] = (df[Lse] + df[Lse2] + df[Lbe] + df[Lbe2]) + 32.0
@@ -70,7 +70,12 @@ def load_and_preprocess(path):
     if len(non_zero) > 0:
         fnz, lnz = non_zero[0], non_zero[-1]
         speed.iloc[fnz:lnz+1] = speed.iloc[fnz:lnz+1].replace(0, np.nan)
-    df['speed'] = speed.interpolate().rolling(window=5, center=True, min_periods=1).mean().fillna(0)
+    if not isinstance(speed, pd.Series):
+        speed = pd.Series(speed)
+    speed = speed.interpolate().rolling(window=5, center=True, min_periods=1).mean()
+    if isinstance(speed, pd.Series):
+        speed = speed.fillna(0)
+    df['speed'] = speed
 
     # Hampel filter on 'raw' to remove spikes (causal window=5)
     x = df['raw'].copy()
@@ -289,10 +294,18 @@ if __name__ == "__main__":
             df = df[df["ESP Time"] >= cutoff].reset_index(drop=True)
 
         # 4.3 Extract arrays for processing
-        idx = df.index.values
-        t_clean = df["target_clean"].values
-        speed = df["speed"].values
-        raw = df["cleaned_raw"].values
+        idx = df.index
+        t_clean = df["target_clean"]
+        speed = df["speed"]
+        raw = df["cleaned_raw"]
+        if isinstance(idx, pd.Index):
+            idx = idx.to_numpy()
+        if isinstance(t_clean, pd.Series):
+            t_clean = t_clean.to_numpy()
+        if isinstance(speed, pd.Series):
+            speed = speed.to_numpy()
+        if isinstance(raw, pd.Series):
+            raw = raw.to_numpy()
 
         # 4.4 Apply filters
         kf_out = kf_inv(raw, speed)
@@ -374,8 +387,10 @@ if __name__ == "__main__":
                      label=f'{name}_aligned (lag={lag})')
             ax2.plot(idx, y_al_scaled, color_map[name], linestyle=':', lw=1,
                      label=f'{name}_scaled')
-        ax2.scatter(idx[tp], t_clean[tp],   c='cyan',   marker='o', label='True Peaks')
-        ax2.scatter(idx[tv], t_clean[tv],   c='magenta', marker='x', label='True Valleys')
+        if tp is not None and len(tp) > 0:
+            ax2.scatter(idx[tp], t_clean[tp],   c='cyan',   marker='o', label='True Peaks')
+        if tv is not None and len(tv) > 0:
+            ax2.scatter(idx[tv], t_clean[tv],   c='magenta', marker='x', label='True Valleys')
         ax2.set_xlabel('Index')
         ax2.set_ylabel('Angle')
         ax2.legend(loc='upper left')
@@ -425,7 +440,10 @@ if __name__ == "__main__":
         heat_filter = plot_filters[0] if plot_filters else "KF_inv"
         y_al_heat, _, _ = aligned[heat_filter]
         baseline = ext_maes.get(heat_filter, np.nan)
-        ext_idx = np.concatenate([tp_all, tv_all])
+        if tp_all is not None and tv_all is not None:
+            ext_idx = np.concatenate([tp_all, tv_all])
+        else:
+            ext_idx = np.array([], dtype=int)
         grid_raw, rr, kk = extrema_mae_grid(
             t_clean,
             y_al_heat,
@@ -471,7 +489,7 @@ if __name__ == "__main__":
         "Filename", "Method", "RMSE", "MAE", "Extrema_MAE",
         "Extrema_MAE_scaled", "MAPE_pk", "MAVE_vl", "Lag",
         "Ref_Angle", "Scale_k", "RMSE_scaled", "MAE_scaled"
-    ])
+    ])  # type: ignore
     print("\n=== Combined Performance Metrics for All Recordings ===")
     print(df_all_metrics.to_string(index=False))
     os.makedirs("results", exist_ok=True)
